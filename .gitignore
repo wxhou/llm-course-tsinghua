@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist.bak/
+
+# Vite cache artifacts (visible in repo root)
+vite.config.js.timestamp-*.mjs
+
+# Test artifacts (Playwright)
+playwright-report/
+test-results/
+coverage/
+.playwright-mcp/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.orig
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project temp files (per AGENTS.md §5)
+tmp/
+
+# OpenSpec planning artifacts (local)
+openspec/
+
+# AI coding assistant
+.claude/
+AGENTS.md
+CLAUDE.md
+.mcp.json
+.aider*
+.aider.chat.history.md
+.aider.input.history
+.cursor/
+.cursorrules
+.cursorignore
+.windsurfrules
+.continue/
+.codex/
