@@ -3,21 +3,15 @@ import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead } from '
 import BpeDemo from '../demos/BpeDemo.jsx'
 import AttentionDemo from '../demos/AttentionDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
+import { HW1_CHECK, HW2_CHECK } from './registry.jsx'
+import { navigateToAnchor } from '../routes.js'
 
 /* ============ 首屏钩子：可玩演示入口 + 续读卡 ============ */
 const DEMOS = [
-  ['#demo-bpe', 'BPE 分词器', '拖动滑块，亲眼看 token 从字符一步步合并长大', 'HW1'],
-  ['#demo-attn', '注意力热力图', '点任意字，看它把注意力分给了谁——真·softmax(QKᵀ/√d)', 'HW1'],
-  ['#demo-scaling', 'Scaling Law 拟合器', '调三个参数拟合幂律，顺手算出 Chinchilla 最优配比', 'HW3'],
+  ['#demo-bpe', 'BPE 分词器', '拖动滑块，亲眼看 token 从字符一步步合并长大', 'HW1', 'hw1'],
+  ['#demo-attn', '注意力热力图', '点任意字，看它把注意力分给了谁——真·softmax(QKᵀ/√d)', 'HW1', 'hw1'],
+  ['#demo-scaling', 'Scaling Law 拟合器', '调三个参数拟合幂律，顺手算出 Chinchilla 最优配比', 'HW3', 'hw3'],
 ]
-
-function jumpToDemo(sel) {
-  const el = document.querySelector(sel)
-  if (!el) return
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
-  setTimeout(() => el.classList.remove('flash'), 1900)
-}
 
 function timeAgo(ts) {
   const m = Math.floor((Date.now() - ts) / 60000)
@@ -30,16 +24,18 @@ function timeAgo(ts) {
 
 export function Overview() {
   const [last] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('llm-last') || 'null') } catch { return null }
+    try {
+      const raw = JSON.parse(localStorage.getItem('llm-last') || 'null')
+      // 旧锚点格式（#hw3）归一为 slug；无效/总览不渲染 Resume 卡
+      const slug = raw?.href ? raw.href.replace(/^#\/?/, '') : null
+      if (!slug || slug === 'overview' || !['hw1','hw2','hw3','hw4','final','plan'].includes(slug)) return null
+      return { ...raw, slug }
+    } catch { return null }
   })
   return (
     <section id="overview">
-      {last && last.href && last.href !== '#overview' && (
-        <a
-          className="resume"
-          href={last.href}
-          onClick={e => { e.preventDefault(); document.querySelector(last.href)?.scrollIntoView({ behavior: 'smooth' }) }}
-        >
+      {last && (
+        <a className="resume" href={'#/' + last.slug}>
           <span className="resume-tag">RESUME</span>
           <span className="resume-body">
             <b>继续上次：{last.label}</b>
@@ -64,8 +60,8 @@ export function Overview() {
         </ul>
       </div>
       <div className="play-grid">
-        {DEMOS.map(([href, title, desc, tag]) => (
-          <button key={href} className="play-card" onClick={() => jumpToDemo(href)}>
+        {DEMOS.map(([href, title, desc, tag, targetSlug]) => (
+          <button key={href} className="play-card" onClick={() => navigateToAnchor(targetSlug, href)}>
             <span className="play-tag">INTERACTIVE · {tag}</span>
             <b>{title}</b>
             <span className="play-desc">{desc}</span>
@@ -108,15 +104,6 @@ export function Overview() {
 }
 
 /* ============ HW1 ============ */
-const HW1_CHECK = [
-  { id: 'hw1-1', text: <>环境就绪；clone <code>karpathy/nanoGPT</code> 与 <code>jingyaogong/minimind</code>（61.8K★，26M→0.5B 全档可复现，中文文档）</> },
-  { id: 'hw1-2', text: '数据：1–5GB 中文语料清洗为纯文本，统计 token 数与字符数比例' },
-  { id: 'hw1-3', text: <>Tokenizer：跑通 <code>minbpe</code>；用自己的语料训练一个 2048 词表的 BPE，检查高频中文词是否成 token</> },
-  { id: 'hw1-4', text: '模型：合上电脑默写 Transformer 块 → 对照 minGPT model.py 逐行订正 → 解释每一行的 shape' },
-  { id: 'hw1-5', text: '训练：overfit 单 batch（loss→≈0）；全量训练 0.1B（~2B token），盯 loss 曲线与梯度范数' },
-  { id: 'hw1-6', text: '采样：实现 temperature / top-k / top-p 三种解码，与 base model 对话，记录"接话不听话"的例子' },
-  { id: 'hw1-7', text: '实验记录：2–3 组不同 (n_layer, d) 配置的 loss 曲线，按 Problem/Motivation/Method/Results 四段写' },
-]
 
 export function HW1() {
   return (
@@ -249,13 +236,6 @@ class CausalSelfAttention(nn.Module):
 }
 
 /* ============ HW2 ============ */
-const HW2_CHECK = [
-  { id: 'hw2-1', text: <>跑通 <a href="https://triton-lang.org/main/getting-started/tutorials/06-fused-attention.html" target="_blank" rel="noreferrer">Triton tutorial 06</a>，画出它的 block 迭代结构</> },
-  { id: 'hw2-2', text: '从零写两个 kernel：naive（落完整 T×T 矩阵）与分块 + online softmax 版' },
-  { id: 'hw2-3', text: '数值对拍 torch SDPA（fp16, atol=1e-2）通过' },
-  { id: 'hw2-4', text: 'benchmark：T∈{512…8192} × 三种实现，画吞吐与显存双图' },
-  { id: 'hw2-5', text: '结论按四段式写：性能差距的瓶颈归因（计算 or 显存带宽）' },
-]
 
 export function HW2() {
   return (

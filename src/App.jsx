@@ -3,16 +3,31 @@ import { Overview, HW1, HW2 } from './content/part1.jsx'
 import { HW3, HW4, Final, Plan } from './content/part2.jsx'
 import { ProgressBox, useGlobalProgress } from './components/Progress.jsx'
 import Palette from './components/Palette.jsx'
+import { PrevNext } from './lib/ui.jsx'
+import { NAV, parseHash, consumePendingAnchor } from './routes.js'
+import { CHECKS } from './content/registry.jsx'
 
-const NAV = [
-  ['#overview', '00', '总览 · 课程阶梯', '看懂这门课在练什么，先玩三个演示'],
-  ['#hw1', '01', 'Tokenizer 与 Transformer', '从字符到 token，从矩阵到对话，亲手训一个 0.1B'],
-  ['#hw2', '02', 'Triton Attention 内核', '同一公式，为什么手写版本快 10 倍'],
-  ['#hw3', '03', '数据与 Scaling Law', '预算有限时，钱该堆参数还是堆数据'],
-  ['#hw4', '04', 'SFT / DPO / RLVR', '模型听话的三条路，统一视角对比'],
-  ['#final', '05', '期末 · 长程 Agent', '造考场、造手脚、造裁判，再训练它'],
-  ['#plan', '06', '八周学习计划', '每周 8–10 小时的路线图'],
-]
+/* 单一路由表：侧栏/⌘K/翻页器共用（routes.js 导出，此处 re-export 便于既有引用） */
+export { NAV }
+
+const SECTIONS = { overview: Overview, hw1: HW1, hw2: HW2, hw3: HW3, hw4: HW4, final: Final, plan: Plan }
+
+/* hash 路由：hashchange 驱动；URL 规范化（默认态/未知/旧格式/纯格式变化）一律 replaceState，不推历史栈 */
+function useHashRoute() {
+  const [slug, setSlug] = useState(parseHash)
+  useEffect(() => {
+    const normalize = () => {
+      const s = parseHash()
+      setSlug(s)
+      const want = '#/' + s
+      if (location.hash !== want) history.replaceState(null, '', want)
+    }
+    normalize()
+    window.addEventListener('hashchange', normalize)
+    return () => window.removeEventListener('hashchange', normalize)
+  }, [])
+  return slug
+}
 
 function useTheme() {
   const [dark, setDark] = useState(() => localStorage.getItem('llm-theme') === 'dark')
@@ -24,7 +39,7 @@ function useTheme() {
   return [dark, () => setDark(d => !d)]
 }
 
-/* 顶栏阅读进度：rAF 节流的滚动百分比 */
+/* 顶栏阅读进度：rAF 节流的滚动百分比（页内语义） */
 function useScrollProgress() {
   const [p, setP] = useState(0)
   useEffect(() => {
@@ -74,45 +89,28 @@ function TopBar({ dark, toggleTheme, onMenu, progress, onPalette }) {
   )
 }
 
-/* checklist id 前缀 → 导航项（用于章节完成 ✓） */
-const PREFIX = { '#hw1': 'hw1', '#hw2': 'hw2', '#hw3': 'hw3', '#hw4': 'hw4', '#final': 'fin' }
-const LABEL = Object.fromEntries(NAV.map(([href, , label]) => [href, label]))
+/* 章节完成度：注册表 × localStorage（skip-overview 的续读写入守卫在路由 effect 中） */
+function chapterStats(prefix) {
+  const items = CHECKS[prefix]
+  if (!items) return { done: 0, total: 0 }
+  return {
+    done: items.filter(it => localStorage.getItem('llmcourse-' + it.id) === '1').length,
+    total: items.length,
+  }
+}
 
-function Sidebar({ open, onNavigate }) {
-  const [active, setActive] = useState('#overview')
+function Sidebar({ open, onNavigate, slug }) {
   const [done, setDone] = useState({})
 
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      es => es.forEach(e => {
-        if (!e.isIntersecting) return
-        const href = '#' + e.target.id
-        setActive(href)
-        /* 跳过总览：避免每次开页都覆盖真实续读记录 */
-        if (href !== '#overview' && LABEL[href]) {
-          localStorage.setItem('llm-last', JSON.stringify({ href, label: LABEL[href], ts: Date.now() }))
-        }
-      }),
-      { rootMargin: '-20% 0px -70% 0px' },
-    )
-    NAV.forEach(([href]) => {
-      const el = document.querySelector(href)
-      if (el) io.observe(el)
-    })
-    return () => io.disconnect()
-  }, [])
-
-  /* 按章节统计 checklist 完成情况 → 导航 ✓ */
+  /* 按注册表统计每章 checklist 完成情况 → 导航 ✓（跨页一致） */
   useEffect(() => {
     const refresh = () => {
       const m = {}
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i)
-        if (!k || !k.startsWith('llmcourse-')) continue
-        const pre = k.slice(10).replace(/-.*$/, '')
-        m[pre] = m[pre] || { d: 0, t: 0 }
-        m[pre].t++
-        if (localStorage.getItem(k) === '1') m[pre].d++
+      for (const [pre, items] of Object.entries(CHECKS)) {
+        m[pre] = {
+          d: items.filter(it => localStorage.getItem('llmcourse-' + it.id) === '1').length,
+          t: items.length,
+        }
       }
       setDone(m)
     }
@@ -129,16 +127,15 @@ function Sidebar({ open, onNavigate }) {
     <nav className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">从零训练大模型</div>
       <div className="brand-sub">基于清华 KEG《高级机器学习》作业阶梯重建的自学课程</div>
-      {NAV.map(([href, no, label, preview]) => {
-        const pre = PREFIX[href]
-        const p = pre && done[pre]
+      {NAV.map(n => {
+        const p = n.prefix && done[n.prefix]
         const isDone = p && p.t > 0 && p.d === p.t
         return (
-          <a key={href} href={href} className={`nav-item ${active === href ? 'active' : ''} ${isDone ? 'done' : ''}`} onClick={onNavigate}>
-            <span className="no">{no}</span>
+          <a key={n.slug} href={'#/' + n.slug} className={`nav-item ${slug === n.slug ? 'active' : ''} ${isDone ? 'done' : ''}`} onClick={onNavigate}>
+            <span className="no">{n.no}</span>
             <span className="lb">
-              {label}
-              {preview && <span className="nav-preview">{preview}</span>}
+              {n.label}
+              <span className="nav-preview">{n.preview}</span>
             </span>
             {isDone ? <span className="ok" title="本章清单全部完成">✓</span> : <span className="leader" aria-hidden="true" />}
           </a>
@@ -154,6 +151,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [palOpen, setPalOpen] = useState(false)
   const progress = useScrollProgress()
+  const slug = useHashRoute()
+  const nav = NAV.find(n => n.slug === slug)
 
   /* 抽屉打开时锁正文滚动 */
   useEffect(() => {
@@ -173,23 +172,40 @@ export default function App() {
     return () => window.removeEventListener('keydown', on)
   }, [])
 
+  /* 续读记录：路由驱动写入；skip-overview 守卫——总览停留不覆盖真实续读记录 */
+  useEffect(() => {
+    if (slug === 'overview') return
+    localStorage.setItem('llm-last', JSON.stringify({ href: '#/' + slug, label: nav.label, ts: Date.now() }))
+  }, [slug, nav])
+
+  /* 路由渲染完成后：消费跨页 pending anchor，否则回顶 */
+  useEffect(() => {
+    const anchor = consumePendingAnchor()
+    const el = anchor && document.querySelector(anchor)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
+      setTimeout(() => el.classList.remove('flash'), 1900)
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [slug])
+
+  const Section = SECTIONS[slug]
+  const stats = chapterStats(nav.prefix)
+
   return (
     <>
       <TopBar dark={dark} toggleTheme={toggleTheme} onMenu={() => setMenuOpen(true)} progress={progress} onPalette={() => setPalOpen(true)} />
       <div className="layout">
-        <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
+        <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} slug={slug} />
         <main>
-          <Overview />
-          <HW1 />
-          <HW2 />
-          <HW3 />
-          <HW4 />
-          <Final />
-          <Plan />
+          <Section />
+          <PrevNext slug={slug} done={stats.done} total={stats.total} />
         </main>
       </div>
       <div className={`scrim ${menuOpen ? 'show' : ''}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
-      <Palette open={palOpen} onClose={() => setPalOpen(false)} />
+      <Palette open={palOpen} onClose={() => setPalOpen(false)} slug={slug} />
     </>
   )
 }

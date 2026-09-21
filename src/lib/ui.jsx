@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import katex from 'katex'
+import { NAV } from '../routes.js'
 import './katex-subset.css'
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
@@ -154,6 +155,36 @@ export function Refs({ items }) {
         ))}
       </ol>
     </div>
+  )
+}
+
+/* ---------------- 章尾翻页器：上一节/下一节 + 下一章预览 + 本章完成度弱提示（无门槛） ---------------- */
+export function PrevNext({ slug, done, total }) {
+  const idx = NAV.findIndex(n => n.slug === slug)
+  const prev = NAV[idx - 1]
+  const next = NAV[idx + 1]
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const on = () => setTick(t => t + 1)  // 同页 Checklist 勾选后弱提示实时更新
+    window.addEventListener('llmcourse-progress', on)
+    window.addEventListener('change', on)
+    return () => { window.removeEventListener('llmcourse-progress', on); window.removeEventListener('change', on) }
+  }, [])
+  // done/total 由 App 每次渲染传入，重渲染即取最新值
+  return (
+    <nav className="pager">
+      {prev
+        ? <a className="pager-btn prev" href={'#/' + prev.slug}><span className="pager-dir">← 上一节</span><b>{prev.label}</b></a>
+        : <span />}
+      {next && (
+        <a className="pager-btn next" href={'#/' + next.slug}>
+          <span className="pager-dir">下一节 →</span>
+          <b>{next.label}</b>
+          <em className="pager-preview">{next.preview}</em>
+          {total > 0 && <i className="pager-hint">本章清单 {done}/{total} 已完成</i>}
+        </a>
+      )}
+    </nav>
   )
 }
 

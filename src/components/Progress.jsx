@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ALL_ITEMS } from '../content/registry.jsx'
 
 const KEY = id => 'llmcourse-' + id
 const EVT = 'llmcourse-progress'
@@ -22,15 +23,13 @@ export function ProgressBox() {
   )
 }
 
-/* 全站 Checklist 完成度：DOM 统计 + 事件订阅，顶栏与侧栏进度共用 */
+/* 全站 Checklist 完成度：静态注册表 × localStorage（不依赖当前页 DOM，分页下跨页一致） */
 export function useGlobalProgress() {
-  const [counts, setCounts] = useState({ done: 0, total: 0 })
+  const [counts, setCounts] = useState({ done: 0, total: ALL_ITEMS.length })
   useEffect(() => {
     const refresh = () => {
-      const boxes = document.querySelectorAll('.check input[type=checkbox]')
-      let done = 0
-      boxes.forEach(b => { if (b.checked) done++ })
-      setCounts({ done, total: boxes.length })
+      const done = ALL_ITEMS.filter(it => localStorage.getItem(KEY(it.id)) === '1').length
+      setCounts({ done, total: ALL_ITEMS.length })
     }
     refresh()
     window.addEventListener(EVT, refresh)
