@@ -44,7 +44,8 @@ export default function ScalingLawDemo() {
     ctx.stroke(); ctx.lineWidth = 1
     ctx.restore()
 
-    const pts = [['GPT-2 1.5B', 2.1e21, 3.3], ['Chinchilla 70B', 5.8e23, 2.4], ['~0.1B 你的 HW1', 2.4e19, 4.0]]
+    // FLOPs = 6·N·D 估算：GPT-2 1.5B ≈ 6·1.5e9·2.2e10；Chinchilla 70B ≈ 6·7e10·1.4e12；HW1 0.1B ≈ 6·1e8·2e9
+    const pts = [['GPT-2 1.5B', 2.0e20, 3.3], ['Chinchilla 70B', 5.8e23, 2.4], ['~0.1B 你的 HW1', 1.2e18, 4.0]]
     pts.forEach(([n, c, l]) => {
       const px = x(c), py = y(l)
       if (px > 50 && px < 490 && py > 30 && py < 310) {
