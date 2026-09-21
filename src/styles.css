@@ -400,6 +400,28 @@ html.dark .ladder::before{opacity:.34}
 .rung .body b{font-size:14px}
 .rung .body p{font-size:12.5px;color:var(--sub);margin:3px 0 0}
 
+/* 章尾翻页器：上一节/下一节 */
+.pager{
+  display:flex;justify-content:space-between;gap:14px;margin:52px 0 8px;
+  border-top:1.5px dashed var(--line);padding-top:22px;
+}
+.pager-btn{
+  display:flex;flex-direction:column;gap:4px;max-width:48%;
+  border:1.5px solid var(--line-ink);border-radius:var(--r);background:var(--card);
+  padding:13px 18px;transition:transform .12s,box-shadow .12s;
+}
+.pager-btn:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--purple);border-bottom-color:var(--line-ink)}
+.pager-btn:active{transform:translate(1px,1px);box-shadow:none}
+.pager-btn.next{margin-left:auto;text-align:right;align-items:flex-end}
+.pager-dir{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--purple)}
+.pager-btn b{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
+.pager-preview{font-style:normal;font-size:11.5px;color:var(--sub);line-height:1.5}
+.pager-hint{
+  font-style:normal;font-family:var(--mono);font-size:10px;color:var(--amber);
+  border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);border-radius:2px;
+  padding:1px 7px;margin-top:6px;
+}
+
 /* ---------- 演示：仪器面板 ---------- */
 .demo{background:var(--card);border:1.5px solid var(--line-ink);border-radius:var(--r);padding:22px 26px;margin:22px 0}
 .demo-title{

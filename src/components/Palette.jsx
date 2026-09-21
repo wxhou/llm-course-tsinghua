@@ -1,32 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { NAV, navigateToAnchor } from '../routes.js'
 
 /* 章节 → 面板标签 */
 const TAG = { overview: '总览', hw1: 'HW1', hw2: 'HW2', hw3: 'HW3', hw4: 'HW4', final: '期末', plan: '计划' }
-const CHAPTERS = [
-  ['#overview', '00', '总览 · 课程阶梯'],
-  ['#hw1', '01', 'Tokenizer 与 Transformer'],
-  ['#hw2', '02', 'Triton Attention 内核'],
-  ['#hw3', '03', '数据与 Scaling Law'],
-  ['#hw4', '04', 'SFT / DPO / RLVR'],
-  ['#final', '05', '期末 · 长程 Agent'],
-  ['#plan', '06', '八周学习计划'],
-]
 
-/* 打开时扫描 DOM 建索引：7 个章节 + 全部 h3 小节 */
-function buildIndex() {
-  const items = CHAPTERS.map(([href, no, label]) => ({ href, no, label, tag: '章节' }))
+/* 索引 = 全局章节条目（静态） + 当前章 h3 小节（打开时 DOM 扫描，范围限本页）。
+   小节 id 永不写入 URL：点击走章节路由 + pending anchor。 */
+function buildIndex(slug) {
+  const items = NAV.map(n => ({ kind: 'chapter', href: '#/' + n.slug, slug: n.slug, no: n.no, label: n.label, tag: '章节' }))
   document.querySelectorAll('main section').forEach(sec => {
+    if (sec.id !== slug) return
     const tag = TAG[sec.id] || sec.id
     sec.querySelectorAll('h3').forEach((h, i) => {
-      const id = `${sec.id}-s${i}`
-      h.id = id
-      items.push({ href: '#' + id, no: '', label: h.textContent.trim(), tag })
+      if (!h.id) h.id = `${sec.id}-s${i}`
+      items.push({ kind: 'anchor', anchor: '#' + h.id, no: '', label: h.textContent.trim(), tag })
     })
   })
   return items
 }
 
-export default function Palette({ open, onClose }) {
+export default function Palette({ open, onClose, slug }) {
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const [items, setItems] = useState([])
@@ -35,12 +28,13 @@ export default function Palette({ open, onClose }) {
 
   useEffect(() => {
     if (open) {
-      setItems(buildIndex())
+      setItems(buildIndex(slug))
       setQ('')
       setSel(0)
       setTimeout(() => inputRef.current?.focus(), 0)
     }
-  }, [open])
+    // 打开期间路由变化（Back/Forward）：不刷新索引、不关面板（scrim 挡视线，Esc 后见新页）
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -59,10 +53,11 @@ export default function Palette({ open, onClose }) {
 
   const go = it => {
     onClose()
-    requestAnimationFrame(() => {
-      location.hash = it.href
-      document.querySelector(it.href)?.scrollIntoView({ behavior: 'smooth' })
-    })
+    if (it.kind === 'chapter') {
+      location.hash = it.href  // 顶滚由路由 effect 负责
+    } else {
+      navigateToAnchor(slug, it.anchor)
+    }
   }
 
   const onKey = e => {
@@ -80,21 +75,21 @@ export default function Palette({ open, onClose }) {
           value={q}
           onChange={e => setQ(e.target.value)}
           onKeyDown={onKey}
-          placeholder="跳转到章节或小节…（试试 softmax / DPO / kernel）"
+          placeholder="跳转到章节，或搜索本页小节…"
           spellCheck="false"
         />
         <div className="pal-list" ref={listRef}>
           {filtered.length === 0 && <div className="pal-empty">没有匹配的小节</div>}
           {filtered.map((it, i) => (
             <div
-              key={it.href + i}
+              key={it.href || it.anchor}
               className={`pal-item ${i === sel ? 'sel' : ''}`}
               onMouseEnter={() => setSel(i)}
               onClick={() => go(it)}
             >
               <span className="no">{it.no || it.tag}</span>
               <span className="pl-label">{it.label}</span>
-              <span className="sub">{it.no ? it.tag : '§'}</span>
+              <span className="sub">{it.no ? it.tag : '§ 本页'}</span>
             </div>
           ))}
         </div>
