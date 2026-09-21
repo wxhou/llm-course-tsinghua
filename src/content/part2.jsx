@@ -43,6 +43,7 @@ def sig(text, num_perm=128, k=5):
     return m
 
 lsh = MinHashLSH(threshold=0.8, num_perm=128)
+keep = {}
 for doc_id, text in corpus.items():
     m = sig(text)
     if not lsh.query(m):          # 已有近邻 => 重复，丢弃
@@ -225,9 +226,9 @@ export function Final() {
       <p>关键设计决策都在这张 schema 里：<M>{'\text{partial}'}</M> 是否允许（稠密奖励好训但易被 hack）、<M>{'\text{max_steps}'}</M> 设多少（决定"长程"到什么程度）、verifier 是否防泄漏（测试本身可能被 agent 改掉——所以真实验收要在<b>另一份</b>隐藏测试上跑）。</p>
       <h3>5.2 Harness 主循环</h3>
       <CodeBlock file="harness.py · agent loop 骨架" lang="python" highlight={[9, 10, 11, 12]}>
-{`def run_episode(env, policy, judge=None):
+{`def run_episode(env, policy, judge=None, traj=None):
     obs, info = env.reset()
-    traj = []
+    traj = traj or []
     for step in range(env.max_steps):
         action = policy(obs, traj)                 # LLM: obs+历史 -> 工具调用
         obs, reward, done, info = env.step(action)
@@ -237,7 +238,7 @@ export function Final() {
     if judge is not None:                          # self-judge 回路
         critique = judge(traj, obs)                # 模型自评: 哪里可能没过
         if critique and not env.verify():          # 不合格且有修改意见
-            return run_episode(env, policy, traj=traj + [('judge', critique)])  # 带批评重试
+            return run_episode(env, policy, judge, traj + [('judge', critique)])  # 带批评重试
     return env.reward(), traj`}
       </CodeBlock>
       <Callout type="warn" title="自己评自己，这两个统计学陷阱要防">

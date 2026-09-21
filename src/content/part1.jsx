@@ -99,7 +99,7 @@ export function Overview() {
           <tr><td>线性代数</td><td>矩阵乘、迹、Frobenius 范数；特征值的直觉</td><td>3Blue1Brown 线代本质系列</td></tr>
           <tr><td>概率 / 信息论</td><td>条件概率、期望、KL 散度、交叉熵的含义与关系</td><td>MacKay《Information Theory》第 1–2 章</td></tr>
           <tr><td>深度学习</td><td>反向传播推导过一遍；知道 Adam 在修什么</td><td>karpathy Zero to Hero（B 站字幕版）</td></tr>
-          <tr><td>算力</td><td>≥8GB 显存一张卡，或 AutoDL/Colab 租卡</td><td>0.1B 规模 4090 数小时可跑完</td></tr>
+          <tr><td>算力</td><td>≥8GB 显存一张卡，或 AutoDL/Colab 租卡</td><td>0.1B 规模 4090 十小时级可跑完（2B token）</td></tr>
         </tbody>
       </table>
       </details>
@@ -109,7 +109,7 @@ export function Overview() {
 
 /* ============ HW1 ============ */
 const HW1_CHECK = [
-  { id: 'hw1-1', text: <>环境就绪；clone <code>karpathy/nanoGPT</code> 与 <code>jingyaogong/minimind</code>（61.5K★，26M→0.5B 全档可复现，中文文档）</> },
+  { id: 'hw1-1', text: <>环境就绪；clone <code>karpathy/nanoGPT</code> 与 <code>jingyaogong/minimind</code>（61.8K★，26M→0.5B 全档可复现，中文文档）</> },
   { id: 'hw1-2', text: '数据：1–5GB 中文语料清洗为纯文本，统计 token 数与字符数比例' },
   { id: 'hw1-3', text: <>Tokenizer：跑通 <code>minbpe</code>；用自己的语料训练一个 2048 词表的 BPE，检查高频中文词是否成 token</> },
   { id: 'hw1-4', text: '模型：合上电脑默写 Transformer 块 → 对照 minGPT model.py 逐行订正 → 解释每一行的 shape' },
