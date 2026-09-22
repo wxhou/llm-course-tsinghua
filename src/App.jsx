@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Overview, HW1, HW2 } from './content/part1.jsx'
 import { HW3, HW4, Final, Plan } from './content/part2.jsx'
-import { ProgressBox, useGlobalProgress } from './components/Progress.jsx'
+import { ProgressBox, useGlobalProgress, useChapterStates, isArchived } from './components/Progress.jsx'
 import Palette from './components/Palette.jsx'
 import { PrevNext } from './lib/ui.jsx'
 import { NAV, parseHash, consumePendingAnchor } from './routes.js'
-import { CHECKS } from './content/registry.jsx'
+import { NarrativeContext } from './lib/narrative.jsx'
 
 /* 单一路由表：侧栏/⌘K/翻页器共用（routes.js 导出，此处 re-export 便于既有引用） */
 export { NAV }
@@ -89,47 +89,18 @@ function TopBar({ dark, toggleTheme, onMenu, progress, onPalette }) {
   )
 }
 
-/* 章节完成度：注册表 × localStorage（skip-overview 的续读写入守卫在路由 effect 中） */
-function chapterStats(prefix) {
-  const items = CHECKS[prefix]
-  if (!items) return { done: 0, total: 0 }
-  return {
-    done: items.filter(it => localStorage.getItem('llmcourse-' + it.id) === '1').length,
-    total: items.length,
-  }
-}
+/* 章节完成度/存档态：Progress.jsx 的 useChapterStates（注册表 × localStorage，事件驱动） */
 
 function Sidebar({ open, onNavigate, slug }) {
-  const [done, setDone] = useState({})
-
-  /* 按注册表统计每章 checklist 完成情况 → 导航 ✓（跨页一致） */
-  useEffect(() => {
-    const refresh = () => {
-      const m = {}
-      for (const [pre, items] of Object.entries(CHECKS)) {
-        m[pre] = {
-          d: items.filter(it => localStorage.getItem('llmcourse-' + it.id) === '1').length,
-          t: items.length,
-        }
-      }
-      setDone(m)
-    }
-    refresh()
-    window.addEventListener('llmcourse-progress', refresh)
-    window.addEventListener('change', refresh)
-    return () => {
-      window.removeEventListener('llmcourse-progress', refresh)
-      window.removeEventListener('change', refresh)
-    }
-  }, [])
+  const states = useChapterStates()
 
   return (
     <nav className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">从零训练大模型</div>
       <div className="brand-sub">基于清华 KEG《高级机器学习》作业阶梯重建的自学课程</div>
       {NAV.map(n => {
-        const p = n.prefix && done[n.prefix]
-        const isDone = p && p.t > 0 && p.d === p.t
+        const p = n.prefix && states[n.prefix]
+        const isDone = p && p.total > 0 && p.done === p.total
         return (
           <a key={n.slug} href={'#/' + n.slug} className={`nav-item ${slug === n.slug ? 'active' : ''} ${isDone ? 'done' : ''}`} onClick={onNavigate}>
             <span className="no">{n.no}</span>
@@ -192,18 +163,28 @@ export default function App() {
   }, [slug])
 
   const Section = SECTIONS[slug]
-  const stats = chapterStats(nav.prefix)
+  const states = useChapterStates()
+  const stats = states[nav.prefix] || { done: 0, total: 0 }
+  /* 阶段签注入：{slug, phaseStates}（slug 键 → {archived}），ChapterHead/PhaseStrip 经 Context 消费 */
+  const narrative = {
+    slug,
+    phaseStates: Object.fromEntries(NAV.map(n => [n.slug, { archived: n.prefix ? isArchived(n.prefix) : false }])),
+  }
 
   return (
     <>
       <TopBar dark={dark} toggleTheme={toggleTheme} onMenu={() => setMenuOpen(true)} progress={progress} onPalette={() => setPalOpen(true)} />
-      <div className="layout">
-        <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} slug={slug} />
-        <main>
-          <Section />
-          <PrevNext slug={slug} done={stats.done} total={stats.total} />
-        </main>
-      </div>
+      <NarrativeContext.Provider value={narrative}>
+        <div className="layout">
+          <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} slug={slug} />
+          <main>
+            <div className={nav.prefix && isArchived(nav.prefix) ? 'chap-complete' : ''}>
+              <Section />
+              <PrevNext slug={slug} done={stats.done} total={stats.total} />
+            </div>
+          </main>
+        </div>
+      </NarrativeContext.Provider>
       <div className={`scrim ${menuOpen ? 'show' : ''}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
       <Palette open={palOpen} onClose={() => setPalOpen(false)} slug={slug} />
     </>

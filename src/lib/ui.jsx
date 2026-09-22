@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import katex from 'katex'
 import { NAV } from '../routes.js'
+import { PHASE_LABELS, useNarrative } from './narrative.jsx'
 import './katex-subset.css'
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
@@ -158,6 +159,46 @@ export function Refs({ items }) {
   )
 }
 
+/* ---------------- 阶段签：训练隐喻铭牌 + 7 格进度（R5，NarrativeContext 注入） ---------------- */
+export function PhaseStrip({ slug }) {
+  const narrative = useNarrative()
+  return (
+    <span className="run-strip" aria-hidden="true">
+      <span className="run-strip-label">{PHASE_LABELS[slug]}</span>
+      {NAV.map(n => {
+        const st = narrative?.phaseStates?.[n.slug]
+        const cls = st?.archived ? 'done' : n.slug === slug ? 'now' : 'future'
+        return <i key={n.slug} className={`tick ${cls}`} />
+      })}
+    </span>
+  )
+}
+
+/* ---------------- 训练档案卡：收敛后总览常驻的藏书票式双框卡（R4 标志性瞬间） ---------------- */
+export function RunReportCard() {
+  const first = localStorage.getItem('llm-first-step-at')
+  const converged = localStorage.getItem('llm-converged-at')
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString('zh-CN') : null
+  return (
+    <aside className="report-card" aria-label="训练档案卡">
+      <div className="rc-inner">
+        <div className="rc-kicker">TRAINING RUN #001 · FINAL REPORT</div>
+        <h3 className="rc-title">从零训练大模型</h3>
+        <div className="rc-stats">
+          28 STEPS · 5 CHECKPOINTS
+          {first && converged && <> · {fmt(first)} → {fmt(converged)}</>}
+        </div>
+        <div className="rc-chapters">
+          {['HW1', 'HW2', 'HW3', 'HW4', 'FINAL'].map(c => <span key={c}>{c}</span>)}
+        </div>
+        <p className="rc-motto">大模型，应退化为一段你亲手写过的、能解释的代码</p>
+        <div className="rc-foot">SELF-TAUGHT · NO ACCOUNT · DATA STAYS IN YOUR BROWSER</div>
+      </div>
+      <span className="rc-stamp" aria-hidden="true">已收敛 · CONVERGED</span>
+    </aside>
+  )
+}
+
 /* ---------------- 章尾翻页器：上一节/下一节 + 下一章预览 + 本章完成度弱提示（无门槛） ---------------- */
 export function PrevNext({ slug, done, total }) {
   const idx = NAV.findIndex(n => n.slug === slug)
@@ -190,6 +231,7 @@ export function PrevNext({ slug, done, total }) {
 
 /* ---------------- 章节头：期刊式巨型描边数字 ---------------- */
 export function ChapterHead({ kicker, no, title, lead, hours, prereq, oneliner }) {
+  const narrative = useNarrative()
   return (
     <header className="chap-head">
       {no && <div className="chap-digit" aria-hidden="true">{no}</div>}
@@ -198,12 +240,15 @@ export function ChapterHead({ kicker, no, title, lead, hours, prereq, oneliner }
         <h2>{title}</h2>
         {oneliner && <div className="oneliner"><b>一句话</b>{oneliner}</div>}
         <p className="lead">{lead}</p>
-        {(hours || prereq) && (
-          <div className="chap-meta">
-            {hours && <span>预计学时 {hours}</span>}
-            {prereq && <span>先修 {prereq}</span>}
-          </div>
-        )}
+        <div className="chap-meta">
+          {(hours || prereq) && (
+            <>
+              {hours && <span>预计学时 {hours}</span>}
+              {prereq && <span>先修 {prereq}</span>}
+            </>
+          )}
+          {narrative && <PhaseStrip slug={narrative.slug} />}
+        </div>
       </div>
     </header>
   )

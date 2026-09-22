@@ -151,6 +151,116 @@ nav a.nav-item.active .leader{border-bottom-color:var(--purple);border-bottom-st
 .progress-bar{height:6px;background:var(--paper2);border:1px solid var(--line);border-radius:2px;margin:9px 0;overflow:hidden}
 .progress-bar>div{height:100%;background:var(--purple);width:0%;transition:width .4s}
 
+/* ---------- 进度叙事层：TRAINING RUN #001 ---------- */
+/* 训练监控面板（R1）：TensorBoard 网格 + 命运曲线虚影 + 进度揭示 + 前锋点 */
+.run-monitor{margin:4px 0 8px}
+.run-monitor svg{display:block}
+.rm-grid{stroke:var(--line);stroke-width:.5}
+.rm-axis{font-family:var(--mono);font-size:8px;fill:var(--sub)}
+.rm-fate{stroke:var(--purple);opacity:.16;stroke-width:1.5;transition:opacity .6s}
+.converged .rm-fate{opacity:.5}
+.rm-progress{
+  stroke:var(--purple);stroke-width:2;stroke-dasharray:100;
+  transition:stroke-dashoffset .6s cubic-bezier(.2,.7,.3,1);
+}
+.rm-tick{stroke:var(--line);stroke-width:1}
+.rm-tick.done{stroke:var(--purple);opacity:.55}
+.rm-dot{fill:var(--purple);animation:rmpulse 2s ease-in-out infinite}
+@keyframes rmpulse{50%{r:4.5;opacity:.75}}
+.rm-caption{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--sub);margin-top:6px}
+.rm-status{color:var(--purple)}
+/* 收敛序列：虚影凝固 + 章砸落（play-seq 类一次性触发；converged 静态终态） */
+.rm-stamp-text{font-family:var(--serif);font-weight:900;font-size:15px;fill:var(--red);opacity:0}
+.play-seq .rm-fate{opacity:.5;transition:opacity 1.2s ease 1.2s}
+.play-seq .rm-stamp{animation:stampin .5s cubic-bezier(.2,.9,.3,1.2) 1.8s backwards}
+.play-seq .rm-stamp-text{fill:var(--red)}
+.converged .rm-stamp-text{fill:var(--red);opacity:.85}
+@keyframes stampin{
+  0%{transform:scale(1.6) rotate(-8deg);opacity:0}
+  60%{transform:scale(1) rotate(-8deg);opacity:.9}
+  100%{transform:scale(1) rotate(-8deg);opacity:.85}
+}
+/* 勾选墨水仪式（R2）：红描边勾一笔写出 */
+.check li span{position:relative}
+.check li:has(input:checked) span::after{
+  content:'';position:absolute;left:-2px;top:50%;width:16px;height:10px;margin-top:-8px;
+  border-left:2.5px solid var(--red);border-bottom:2.5px solid var(--red);
+  transform:rotate(-48deg) scale(1);opacity:.8;pointer-events:none;
+  animation:inkdraw .4s ease-out;
+}
+@keyframes inkdraw{from{width:0;opacity:.2}to{width:16px;opacity:1}}
+/* ProgressBox 数字跳字 */
+.rm-caption span{transition:transform .15s}
+.rm-caption .bump{animation:bump .35s ease}
+@keyframes bump{40%{transform:translateY(-2px);color:var(--purple)}}
+/* 第一公里仪式（R6） */
+.first-ritual{
+  display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;padding:10px 12px;
+  border:1.5px dashed var(--red);border-radius:var(--r);background:var(--red-soft);
+  animation:stampin .5s cubic-bezier(.2,.9,.3,1.2);
+}
+.ritual-stamp{
+  align-self:flex-start;font-family:var(--serif);font-weight:900;font-size:12px;color:var(--red);
+  border:2px solid var(--red);border-radius:3px;padding:1px 7px;transform:rotate(-6deg);
+}
+.ritual-copy{font-size:11.5px;color:var(--ink);line-height:1.6}
+/* CKPT 存档章（R3）：章头骑线红章 + 侧栏微缩章 */
+.chap-complete .chap-body::after{
+  content:'CKPT · 已存档';position:absolute;top:-14px;right:0;
+  font-family:var(--serif);font-weight:900;font-size:13px;color:var(--red);
+  border:2px solid var(--red);border-radius:4px;padding:2px 8px;
+  transform:rotate(-7deg);opacity:.5;pointer-events:none;
+}
+nav .nav-item.done .ok{
+  border:1.5px solid var(--red);border-radius:50%;width:16px;height:16px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:9px;transform:rotate(-8deg);color:var(--red);flex-shrink:0;
+}
+/* 阶段签（R5）：铭牌 + 7 格进度 */
+.run-strip{display:inline-flex;align-items:center;gap:5px;margin-left:auto}
+.run-strip-label{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--purple);letter-spacing:.08em}
+.run-strip .tick{width:7px;height:7px;border-radius:1px;display:inline-block}
+.run-strip .tick.done{background:var(--ink);border:1px solid var(--ink)}
+.run-strip .tick.now{border:2px solid var(--purple);animation:tickpulse 2s ease-in-out infinite}
+.run-strip .tick.future{border:1.5px dashed var(--sub)}
+@keyframes tickpulse{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--purple) 25%,transparent)}}
+/* 训练档案卡（R4）：藏书票式双框 */
+.report-card{
+  position:relative;margin:6px 0 26px;padding:4px;
+  border:1.5px solid var(--line-ink);border-radius:var(--r);background:var(--card);
+  box-shadow:4px 4px 0 var(--purple-soft);
+}
+.rc-inner{
+  border:1px solid var(--line-ink);padding:22px 26px;text-align:center;position:relative;
+}
+.rc-kicker{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--sub)}
+.rc-title{font-family:var(--serif);font-weight:900;font-size:26px;color:var(--ink);margin:8px 0 6px}
+.rc-stats{font-family:var(--mono);font-size:11px;color:var(--sub)}
+.rc-chapters{display:flex;justify-content:center;gap:8px;margin:12px 0}
+.rc-chapters span{
+  font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--purple);
+  border:1px solid var(--purple);border-radius:2px;padding:2px 8px;letter-spacing:.1em;
+}
+.rc-motto{font-family:var(--serif);font-size:13px;color:var(--ink);margin:10px 0 14px}
+.rc-foot{border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--green)}
+.rc-stamp{
+  position:absolute;top:-12px;right:14px;
+  font-family:var(--serif);font-weight:900;font-size:12px;color:var(--red);
+  border:2px solid var(--red);border-radius:4px;padding:2px 8px;
+  transform:rotate(-8deg);opacity:.8;background:var(--card);
+}
+.chap-body{position:relative}
+
+/* reduced-motion：叙事层动画全量降级为静态终态 */
+@media (prefers-reduced-motion:reduce){
+  .rm-dot{animation:none}
+  .run-strip .tick.now{animation:none}
+  .check li:has(input:checked) span::after{animation:none}
+  .first-ritual{animation:none}
+  .play-seq .rm-fate{opacity:.5;transition:none}
+  .play-seq .rm-stamp{animation:none}
+}
+
 /* ---------- 章节头：期刊式巨型描边数字 ---------- */
 section{margin-bottom:110px;scroll-margin-top:80px;animation:rise .55s cubic-bezier(.2,.7,.3,1) backwards}
 main>section:nth-child(2){animation-delay:.06s}
