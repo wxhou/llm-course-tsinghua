@@ -59,3 +59,12 @@ CLAUDE.md
 .windsurfrules
 .continue/
 .codex/
+# openspec-pw: begin managed block
+.opencode/
+.cline/
+.pi/
+.omp/
+app-exploration.md
+opencode.json
+tests/playwright/credentials.yaml
+# openspec-pw: end managed block

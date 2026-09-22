@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead } from '../lib/ui.jsx'
+import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, RunReportCard, PhaseStrip } from '../lib/ui.jsx'
 import BpeDemo from '../demos/BpeDemo.jsx'
 import AttentionDemo from '../demos/AttentionDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
@@ -34,6 +34,7 @@ export function Overview() {
   })
   return (
     <section id="overview">
+      {typeof localStorage !== 'undefined' && localStorage.getItem('llm-converged-at') && <RunReportCard />}
       {last && (
         <a className="resume" href={'#/' + last.slug}>
           <span className="resume-tag">RESUME</span>
@@ -45,6 +46,7 @@ export function Overview() {
         </a>
       )}
       <div className="kicker">OVERVIEW</div>
+      <PhaseStrip slug="overview" />
       <h1>从零训练大模型 · 自学阶梯</h1>
       <p className="lead">
         复刻清华 KEG 唐杰《高级机器学习》（2026 秋）的作业设计。课程课件未公开，本站基于公开转述与开源社区资源重建了整条学习路径：<b>每一格作业 = 数学推导 + 可运行代码 + OJ 式编程作业 + 进阶思考题</b>。
