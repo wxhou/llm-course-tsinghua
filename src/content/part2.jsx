@@ -1,4 +1,4 @@
-import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead } from '../lib/ui.jsx'
+import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, ErrorQuickRef } from '../lib/ui.jsx'
 import ScalingLawDemo from '../demos/ScalingLawDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
 import { HW3_CHECK, HW4_CHECK, FIN_CHECK } from './registry.jsx'
@@ -84,6 +84,11 @@ for doc_id, text in corpus.items():
       <Star diff={3} title="数据配比问题（domain weighting）为什么不能靠网格搜索？DoReMi 的思路是什么？">
         网格搜索每配比都要训一个模型，成本不可承受；且最优配比随规模漂移。DoReMi 训一组小 domain experts，用组间 KL 作为代理信号在线调整配比——把"哪个域值得多喂"变成轻量的分布优化。思考：这种 proxy 在你的 26M 实验里可以直接验证。
       </Star>
+      <ErrorQuickRef items={[
+        [<>datatrove 处理 fineweb 时内存一路涨到 OOM</>, <>管道中某个阶段把全量文档攒进了内存（如自定义 filter 里累积列表）；或 worker 数 × 批大小过大</>, <>用流式 iterator 逐块读写；worker 数从 1 起步；观测 <code>htop</code> 定位是哪一段涨</>],
+        [<>minhash 去重后语料「全删光」或「几乎没删」</>, <>LSH 阈值与 perm 数配置不当：阈值过低误杀、过高漏删；或分片 shingle 太短</>, <>先对 1000 条抽样人工看判定对不对；阈值从 0.8 起步调；记录去重前后条数曲线确认平滑下降</>],
+        [<>幂律拟合 R² 为负 / α 明显不对</>, <>忘记取对数就在 log 空间做线性拟合；或各数据点训练 token 数不一致，loss 不可比</>, <>确认 x=ln N、y=ln L 都取过 log；所有点用相同 token 数训练；用本站 Scaling Law 演示器对照形状</>],
+      ]} />
       <Checklist items={HW3_CHECK} />
       <h3>资源</h3>
       <div className="res-grid">
@@ -163,6 +168,11 @@ export function HW4() {
       <Star diff={3} title="RLVR 中，如果判分器噪声率为 p（p 概率给错分），GRPO 的组内基线为什么比绝对奖励更稳？">
         组内基线只依赖同 prompt 内的<b>相对序</b>；独立噪声在取均值时部分抵消，且 std 归一进一步压制噪声尺度。但当 <M>{'p'}</M> 高到改变组内排序时，优势方向出错且无自检机制——所以工程上"判分器置信度"应进入采样策略（低置信样本不进梯度）。
       </Star>
+      <ErrorQuickRef items={[
+        [<><code>ImportError: cannot import name 'DPOTrainer' from 'trl'</code> 或同类报错</>, 'transformers / trl / peft / accelerate 版本矩阵不匹配——四件套迭代快，API 位置常搬家', <>按 TRL 文档的版本对应表一次性 pin 四个版本（新 venv 装），不要逐个升级试</>],
+        [<>DPO 训练 loss 上升 / reward margin 全负</>, <>beta 过小导致 policy 偏离参考模型过远，或 chosen/rejected 数据对格式错位</>, <>beta 从 0.1 起步；lr 降到 5e-7 量级；抽 10 条数据人工核对 chosen/rejected 是否标反</>],
+        [<>GRPO 训练 reward 恒为 0</>, <>判分器答案匹配过严：格式、空白、单位、多解都会被误判为错</>, <>先拿 20 条模型输出人工喂给判分器看逐条判定；加答案归一化（去空白/统一小数位）；再考虑部分得分</>],
+      ]} />
       <Checklist items={HW4_CHECK} />
       <h3>资源</h3>
       <div className="res-grid">
@@ -245,6 +255,11 @@ export function Final() {
           'RLVR 阶段把 reward 稀疏问题放在第一位：可以先给 partial reward（编译通过=0.2，单测部分通过=按比例），但要在报告里说明 hack 风险。',
         ]}
       />
+      <ErrorQuickRef items={[
+        [<><code>401 Unauthorized</code> / <code>429 Too Many Requests</code></>, 'API key 无效或额度耗尽（401）；触发限流（429）', <>key 从环境变量读并打印前 4 位核对；429 加指数退避重试 + 请求限速；留意免费档并发=1</>],
+        [<>自建环境判分全部 fail（agent 其实做对了）</>, 'verifier 的测试命令/工作目录与容器内实际路径不一致，或依赖未装', <>自己以「考生身份」在容器里手动跑一遍测试命令；用绝对路径或显式 cd；把依赖固化进环境镜像</>],
+        [<>长轨迹跑几步就超上下文窗口</>, '每步的工具输出（文件全文、长日志）原样进历史，轨迹线性膨胀', <>工具输出截断（只回错误行+前后文）；历史超窗时做滚动摘要；read 工具返回带行号窗口而非全文</>],
+      ]} />
       <h3>5.4 进阶思考题</h3>
       <Star diff={3} title="为什么'隐藏测试'是防 hacking 的必要非充分条件？还能从哪三个维度加固？">
         必要：agent 可见的测试可被直接改写或硬编码通过。非充分：agent 仍可 overfit 输入分布（特判题面样例）、或通过 side channel（修改 conftest/环境变量）。加固：输入扰动（同构新用例）、过程检查（diff 审计：测试文件的修改单独 revert）、pass@k 与 pass^k 双指标（后者衡量稳定性）。

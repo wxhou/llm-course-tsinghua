@@ -2,7 +2,7 @@
    debt: 数组含 JSX 故为 .jsx；新增章节时把对应 CHECK 数组移入本文件并在 CHECKS 登记。 */
 
 export const HW1_CHECK = [
-  { id: 'hw1-1', text: <>环境就绪；clone <code>karpathy/nanoGPT</code> 与 <code>jingyaogong/minimind</code>（61.8K★，26M→0.5B 全档可复现，中文文档）</> },
+  { id: 'hw1-1', text: <>环境就绪：本地路线 clone <code>karpathy/nanoGPT</code> 与 <code>jingyaogong/minimind</code>（61.8K★，26M→0.5B 全档可复现，中文文档）；<b>没有本地 GPU 则走</b> <a href="https://colab.research.google.com/#file=https://llm-course-tsinghua.pages.dev/notebooks/hw1-starter.ipynb" target="_blank" rel="noreferrer">Colab 零环境起步</a></> },
   { id: 'hw1-2', text: '数据：1–5GB 中文语料清洗为纯文本，统计 token 数与字符数比例' },
   { id: 'hw1-3', text: <>Tokenizer：跑通 <code>minbpe</code>；用自己的语料训练一个 2048 词表的 BPE，检查高频中文词是否成 token</> },
   { id: 'hw1-4', text: '模型：合上电脑默写 Transformer 块 → 对照 minGPT model.py 逐行订正 → 解释每一行的 shape' },

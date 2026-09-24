@@ -111,8 +111,10 @@ export function Checklist({ items }) {
     <ul className="check">
       {items.map((it, i) => (
         <li key={it.id}>
-          <input type="checkbox" checked={state[i]} onChange={() => toggle(i)} />
-          <span>{it.text}</span>
+          <label>
+            <input type="checkbox" checked={state[i]} onChange={() => toggle(i)} />
+            <span>{it.text}</span>
+          </label>
         </li>
       ))}
     </ul>
