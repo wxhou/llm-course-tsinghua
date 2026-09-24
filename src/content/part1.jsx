@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, RunReportCard, PhaseStrip } from '../lib/ui.jsx'
+import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, RunReportCard, PhaseStrip, ErrorQuickRef, COLAB_URL } from '../lib/ui.jsx'
 import BpeDemo from '../demos/BpeDemo.jsx'
 import AttentionDemo from '../demos/AttentionDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
@@ -54,13 +54,21 @@ export function Overview() {
       <div className="you-get">
         <div className="you-get-title">走完这条路径，你会带走</div>
         <ul>
-          <li>一个<b>你亲手训练</b>的 0.1B 参数语言模型（能对话）</li>
-          <li>看懂 GPU 上「同一公式差 10 倍速度」的原因，<b>手写过</b> attention 内核</li>
-          <li>回答「预算怎么花」的<b>数据 + Scaling Law</b> 方法论</li>
-          <li>SFT / DPO / RLVR 三条后训练路线的<b>受控对比实验</b>经验</li>
-          <li>一个能自动修 bug 的<b>迷你 Agent 系统</b>（期末作品）</li>
+          <li><span>一个<b>你亲手训练</b>的 0.1B 参数语言模型（能对话）</span></li>
+          <li><span>看懂 GPU 上「同一公式差 10 倍速度」的原因，<b>手写过</b> attention 内核</span></li>
+          <li><span>回答「预算怎么花」的<b>数据 + Scaling Law</b> 方法论</span></li>
+          <li><span>SFT / DPO / RLVR 三条后训练路线的<b>受控对比实验</b>经验</span></li>
+          <li><span>一个能自动修 bug 的<b>迷你 Agent 系统</b>（期末作品）</span></li>
         </ul>
       </div>
+      <a className="resume colab-cta" href={COLAB_URL} target="_blank" rel="noreferrer">
+        <span className="resume-tag">COLAB</span>
+        <span className="resume-body">
+          <b>零环境起步 · 二十分钟跑通第一次 loss 下降</b>
+          <span className="resume-time">免费 T4 · 数据下载/模型/训练循环已填好，3 处练习位 · notebook 数据留在你的 Colab 会话，与本站无关</span>
+        </span>
+        <span className="resume-go" aria-hidden="true">→</span>
+      </a>
       <div className="play-grid">
         {DEMOS.map(([href, title, desc, tag, targetSlug]) => (
           <button key={href} className="play-card" onClick={() => navigateToAnchor(targetSlug, href)}>
@@ -180,6 +188,12 @@ class CausalSelfAttention(nn.Module):
         <p><b>mask 泄漏</b>：评测时用了双向注意力，训练 loss 低得可疑；<b>norm 位置</b>：Post-LN 深层训不动时先检查是否漏了残差分支上的 LN；<b>数值</b>：fp16 训练出现 NaN，换 bf16 或对 attention 前做 <code>float()</code> 提升。排查顺序永远是：先 overfit 单 batch，再查数据管线，最后查数值。</p>
       </Callout>
 
+      <details className="colab-fold">
+        <summary>零环境起步 · 在 Colab 免费 GPU 上先跑通（无需本地环境）</summary>
+        <p>
+          <a href={COLAB_URL} target="_blank" rel="noreferrer">打开 hw1-starter.ipynb（Colab 新标签）</a>——数据下载、minBPE 分词器、与 1.4 同源的模型、训练循环已全部填好，500 步内看到 loss 从 5.7 降到 ~1.8。3 处练习位对应本章考核点：学习率探索、temperature/top-k 采样、去残差消融。notebook 数据留在你自己的 Colab 会话中，与本站无关；正式 HW1 请换成自己的中文语料。
+        </p>
+      </details>
       <h3>1.5 编程作业</h3>
       <Assignment
         title="PA1 · 从零训练 nanogpt-mini 并完成受控消融"
@@ -213,6 +227,12 @@ class CausalSelfAttention(nn.Module):
         贪心/低温采样下，重复前缀会提高其自身的续写概率（正反馈），进入吸引子。补救：重复惩罚（logit 减固定值）、presence/frequency penalty、或对比搜索。代价：这些手段都会扭曲分布，长文本里引入不连贯——本质是"用分布偏移换多样性"。
       </Star>
 
+      <ErrorQuickRef items={[
+        [<><code>CUDA out of memory. Tried to allocate 2.50 GiB...</code></>, 'batch × 序列长 × 通道的激活总量超过显存；或训练中途碎片化', <>减 batch_size、开启梯度累积、<code>torch.cuda.empty_cache()</code>；碎片化严重时重启进程再试</>],
+        [<><code>Loss became NaN or Inf at step N</code>（或 loss 打印直接变 NaN）</>, <>学习率过大 / fp16 数值溢出 / 数据里混入异常 token</>, <>先降 lr 一个数量级；fp16 换 bf16 或开 GradScaler；加梯度裁剪 <code>torch.nn.utils.clip_grad_norm_(p, 1.0)</code>；排除数据源</>],
+        [<>DataLoader worker 被杀 / 一直卡在第一个 batch</>, <>num_workers 过高打满内存，或容器内共享内存 <code>/dev/shm</code> 耗尽</>, <>从 <code>num_workers=0</code> 起步再逐级加；容器里加大 shm（<code>--shm-size</code>）；持久化 workers 设 <code>persistent_workers=True</code></>],
+        [<>fp16 训练梯度下溢 / <code>Attempting to unscale FP16 gradients</code></>, <>fp16 动态范围窄，小梯度被舍入为 0（loss scale 不够）</>, <>硬件支持就换 <code>bfloat16</code>（无需 loss scale）；否则用 <code>torch.cuda.amp.GradScaler</code> 并调大 init_scale</>],
+      ]} />
       <Checklist items={HW1_CHECK} />
       <h3>资源</h3>
       <div className="res-grid">
@@ -314,6 +334,11 @@ def softmax_kernel(out_ptr, in_ptr, n_cols, BLOCK: tl.constexpr):
       <Star diff={3} title="FlashAttention-2 相比 v1 改了哪个并行维度，为什么对小 batch 训练收益大？">
         v1 在 batch×head 维并行，SM 占用率在长序列小 batch 时不足（seq 维只有 1 个程序）；v2 把 Q 的序列维也拆开并行、并减少非 matmul FLOPs、调整 warp 分工。你的 kernel 卡在 SM 占用还是带宽，决定了这些技巧哪些对你有效——先 profile 再抄。
       </Star>
+      <ErrorQuickRef items={[
+        [<><code>OutOfResources: shared memory</code> / ptxas 编译报错</>, 'BLOCK 过大，单个 program 的共享内存/寄存器超过 SM 上限', <>调小 <code>BLOCK</code>（64 起步）；<code>num_warps</code> 4→8 对比；查 <code>triton.compiler.errors</code> 具体行</>],
+        [<>分块版与 SDPA 对拍 <code>allclose</code> 不通过</>, 'online softmax 的累积顺序与一次算完不同 + fp16 精度，属预期误差；也可能 mask 偏移一位', <>累积用 fp32；atol 放到 1e-2（fp16 合理容差）；打印 max-abs-err 定位是否系统性偏差；查 Q/K 块的因果边界</>],
+        [<>benchmark 显示手写 kernel 比朴素实现还快 100 倍（不可能）</>, '没等 GPU 算完就开始计时——测到的是 kernel launch 队列长度', <><code>torch.cuda.synchronize()</code> 后再计时，或用 CUDA events；warmup ≥3 次</>],
+      ]} />
       <Checklist items={HW2_CHECK} />
       <h3>资源</h3>
       <div className="res-grid">

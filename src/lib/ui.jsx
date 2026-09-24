@@ -9,6 +9,10 @@ import bash from 'highlight.js/lib/languages/bash'
 import json from 'highlight.js/lib/languages/json'
 import plaintext from 'highlight.js/lib/languages/plaintext'
 
+/* HW1 starter notebook 的 Colab 加载入口（notebook 随构建发布于站点公网路径，私库 GitHub 拉不到） */
+export const COLAB_URL =
+  'https://colab.research.google.com/#file=https://llm-course-tsinghua.pages.dev/notebooks/hw1-starter.ipynb'
+
 hljs.registerLanguage('python', python)
 hljs.registerLanguage('bash', bash)
 hljs.registerLanguage('json', json)
@@ -199,6 +203,23 @@ export function RunReportCard() {
   )
 }
 
+/* ---------------- 高频报错速查（三线表：报错现象/原因/修复；td 断行防长 token 串撑破窄屏） ---------------- */
+export function ErrorQuickRef({ items }) {
+  return (
+    <details className="err-ref">
+      <summary>高频报错速查 · 做作业卡壳先看这里</summary>
+      <table>
+        <thead><tr><th>报错现象</th><th>原因</th><th>修复</th></tr></thead>
+        <tbody>
+          {items.map(([err, cause, fix], i) => (
+            <tr key={i}><td>{err}</td><td>{cause}</td><td>{fix}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )
+}
+
 /* ---------------- 章尾翻页器：上一节/下一节 + 下一章预览 + 本章完成度弱提示（无门槛） ---------------- */
 export function PrevNext({ slug, done, total }) {
   const idx = NAV.findIndex(n => n.slug === slug)
@@ -237,7 +258,7 @@ export function ChapterHead({ kicker, no, title, lead, hours, prereq, oneliner }
       {no && <div className="chap-digit" aria-hidden="true">{no}</div>}
       <div className="chap-body">
         <div className="kicker">{kicker}</div>
-        <h2>{title}</h2>
+        <h1 className="chap-title">{title}</h1>
         {oneliner && <div className="oneliner"><b>一句话</b>{oneliner}</div>}
         <p className="lead">{lead}</p>
         <div className="chap-meta">

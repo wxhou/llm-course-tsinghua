@@ -27,12 +27,13 @@ export default function Palette({ open, onClose, slug }) {
   const listRef = useRef(null)
 
   useEffect(() => {
-    if (open) {
-      setItems(buildIndex(slug))
-      setQ('')
-      setSel(0)
-      setTimeout(() => inputRef.current?.focus(), 0)
-    }
+    if (!open) return
+    setItems(buildIndex(slug))
+    setQ('')
+    setSel(0)
+    setTimeout(() => inputRef.current?.focus(), 0)
+    // 关闭时焦点归还触发按钮（移动端 pal-btn 隐藏，focus() 安全空操作）
+    return () => { document.querySelector('.pal-btn')?.focus() }
     // 打开期间路由变化（Back/Forward）：不刷新索引、不关面板（scrim 挡视线，Esc 后见新页）
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -60,29 +61,33 @@ export default function Palette({ open, onClose, slug }) {
     }
   }
 
+  /* 键盘语义挂在对话框容器上：Esc 任何位置可关；Tab 困在面板内（input 是唯一落点） */
   const onKey = e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => Math.min(s + 1, filtered.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => Math.max(s - 1, 0)) }
     else if (e.key === 'Enter' && filtered[sel]) { e.preventDefault(); go(filtered[sel]) }
     else if (e.key === 'Escape') { e.preventDefault(); onClose() }
+    else if (e.key === 'Tab') { e.preventDefault(); inputRef.current?.focus() }
   }
 
   return (
     <div className="pal-scrim" onClick={onClose}>
-      <div className="pal" role="dialog" aria-label="快速跳转" onClick={e => e.stopPropagation()}>
+      <div className="pal" role="dialog" aria-label="快速跳转" onKeyDown={onKey} onClick={e => e.stopPropagation()}>
         <input
           ref={inputRef}
           value={q}
           onChange={e => setQ(e.target.value)}
-          onKeyDown={onKey}
           placeholder="跳转到章节，或搜索本页小节…"
+          aria-label="搜索章节或小节"
           spellCheck="false"
         />
-        <div className="pal-list" ref={listRef}>
-          {filtered.length === 0 && <div className="pal-empty">没有匹配的小节</div>}
+        <div className="pal-list" role="listbox" aria-label="跳转目标" ref={listRef}>
+          {filtered.length === 0 && <div className="pal-empty">没有匹配「{q.trim()}」的小节——清空关键词可看全部章节</div>}
           {filtered.map((it, i) => (
             <div
               key={it.href || it.anchor}
+              role="option"
+              aria-selected={i === sel}
               className={`pal-item ${i === sel ? 'sel' : ''}`}
               onMouseEnter={() => setSel(i)}
               onClick={() => go(it)}

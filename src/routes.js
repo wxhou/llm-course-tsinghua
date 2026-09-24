@@ -12,6 +12,10 @@ export const NAV = [
 
 const SLUGS = NAV.map(n => n.slug)
 
+/* 滚动行为随 prefers-reduced-motion 降级（CSS scroll-behavior 管不到 JS scrollIntoView） */
+export const scrollBehavior = () =>
+  matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+
 /* 解析当前 hash → slug。兼容旧锚点格式（'#hw3'），未知/空 → overview */
 export function parseHash() {
   const h = location.hash.replace(/^#\/?/, '')
@@ -36,7 +40,7 @@ export function navigateToAnchor(slug, anchor) {
   if (parseHash() === slug) {
     const el = document.querySelector(anchor)
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
       flash(el)
     }
     return

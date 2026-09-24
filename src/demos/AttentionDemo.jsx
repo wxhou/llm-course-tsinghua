@@ -64,15 +64,15 @@ export default function AttentionDemo() {
         <tbody>
           {SENT.map((q, qi) => (
             <tr key={qi}>
-              <td
-                className="attn-cell"
-                onClick={() => setSelQ(qi)}
-                style={{
-                  color: qi === selQ ? 'var(--accent)' : 'var(--sub)',
-                  fontWeight: qi === selQ ? 700 : 400,
-                }}
-              >
-                {q}
+              <td className="attn-cell">
+                <button type="button" className="attn-q" aria-pressed={qi === selQ} onClick={() => setSelQ(qi)}
+                  style={{
+                    color: qi === selQ ? 'var(--accent)' : 'var(--sub)',
+                    fontWeight: qi === selQ ? 700 : 400,
+                  }}
+                >
+                  {q}
+                </button>
               </td>
               {rows[qi].map((v, ki) => (
                 <td

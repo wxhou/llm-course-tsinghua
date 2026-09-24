@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Overview, HW1, HW2 } from './content/part1.jsx'
 import { HW3, HW4, Final, Plan } from './content/part2.jsx'
 import { ProgressBox, useGlobalProgress, useChapterStates, isArchived } from './components/Progress.jsx'
 import Palette from './components/Palette.jsx'
 import { PrevNext } from './lib/ui.jsx'
-import { NAV, parseHash, consumePendingAnchor } from './routes.js'
+import { NAV, parseHash, consumePendingAnchor, scrollBehavior } from './routes.js'
 import { NarrativeContext } from './lib/narrative.jsx'
 
 /* 单一路由表：侧栏/⌘K/翻页器共用（routes.js 导出，此处 re-export 便于既有引用） */
@@ -35,6 +35,12 @@ function useTheme() {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('llm-theme', dark ? 'dark' : 'light')
     window.dispatchEvent(new Event('llm-theme'))
+    // 主题切换瞬移：全页 transition 停一帧，避免几十处颜色同时补间成"糊变"
+    const snap = document.createElement('style')
+    snap.textContent = '*,*::before,*::after{transition:none!important}'
+    document.head.appendChild(snap)
+    void document.body.offsetHeight
+    requestAnimationFrame(() => snap.remove())
   }, [dark])
   return [dark, () => setDark(d => !d)]
 }
@@ -125,10 +131,25 @@ export default function App() {
   const slug = useHashRoute()
   const nav = NAV.find(n => n.slug === slug)
 
-  /* 抽屉打开时锁正文滚动 */
+  /* 抽屉打开时锁正文滚动；背景（顶栏/正文）退出 tab 序与读屏树；关闭时焦点归还触发按钮 */
+  const wasOpen = useRef(false)
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
+    document.body.classList.toggle('drawer-open', menuOpen)
+    if (wasOpen.current && !menuOpen) document.querySelector('.menu-btn')?.focus()
+    wasOpen.current = menuOpen
+    return () => {
+      document.body.style.overflow = ''
+      document.body.classList.remove('drawer-open')
+    }
+  }, [menuOpen])
+
+  /* Esc 关闭抽屉 */
+  useEffect(() => {
+    if (!menuOpen) return
+    const on = e => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', on)
+    return () => window.removeEventListener('keydown', on)
   }, [menuOpen])
 
   /* 全局 ⌘K / Ctrl+K 唤起跳转面板 */
@@ -154,7 +175,7 @@ export default function App() {
     const anchor = consumePendingAnchor()
     const el = anchor && document.querySelector(anchor)
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
       el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
       setTimeout(() => el.classList.remove('flash'), 1900)
     } else {
@@ -173,11 +194,12 @@ export default function App() {
 
   return (
     <>
+      <a className="skip-link" href="#main">跳到正文</a>
       <TopBar dark={dark} toggleTheme={toggleTheme} onMenu={() => setMenuOpen(true)} progress={progress} onPalette={() => setPalOpen(true)} />
       <NarrativeContext.Provider value={narrative}>
         <div className="layout">
           <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} slug={slug} />
-          <main>
+          <main id="main" tabIndex={-1}>
             <div className={nav.prefix && isArchived(nav.prefix) ? 'chap-complete' : ''}>
               <Section />
               <PrevNext slug={slug} done={stats.done} total={stats.total} />

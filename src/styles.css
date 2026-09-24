@@ -38,13 +38,16 @@ html{scroll-behavior:smooth}
 body{
   font-family:var(--sans);background:var(--paper);color:var(--ink);
   line-height:1.85;-webkit-font-smoothing:antialiased;
-  /* 方格纸纹理：浅色紫墨格线，暗色微亮紫格线（--grid 主题化） */
+}
+/* 方格纸纹理：挂独立 fixed 伪层而非 body background-attachment:fixed——
+   后者每个滚动帧强制整页主线程重绘，sticky 侧栏文字逐帧再光栅化 → 视觉抖动（user feedback 2026-09-22）。
+   z-index:0 落在 body 纸底之上、.layout（relative）之下，视觉效果与原先一致 */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:
     linear-gradient(var(--grid) 1px,transparent 1px),
     linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:36px 36px;
-  background-attachment:fixed;
-  background-position:center top;
 }
 /* 内容层盖住格纸，只在页边露出 */
 .layout{position:relative}
@@ -156,7 +159,7 @@ nav a.nav-item.active .leader{border-bottom-color:var(--purple);border-bottom-st
 .run-monitor{margin:4px 0 8px}
 .run-monitor svg{display:block}
 .rm-grid{stroke:var(--line);stroke-width:.5}
-.rm-axis{font-family:var(--mono);font-size:8px;fill:var(--sub)}
+.rm-axis{font-family:var(--mono);font-size:10px;fill:var(--sub)}
 .rm-fate{stroke:var(--purple);opacity:.16;stroke-width:1.5;transition:opacity .6s}
 .converged .rm-fate{opacity:.5}
 .rm-progress{
@@ -165,9 +168,10 @@ nav a.nav-item.active .leader{border-bottom-color:var(--purple);border-bottom-st
 }
 .rm-tick{stroke:var(--line);stroke-width:1}
 .rm-tick.done{stroke:var(--purple);opacity:.55}
-.rm-dot{fill:var(--purple);animation:rmpulse 2s ease-in-out infinite}
-@keyframes rmpulse{50%{r:4.5;opacity:.75}}
-.rm-caption{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--sub);margin-top:6px}
+/* 前锋点为静态点：勿加常驻脉冲动画（rm-ring/rmpulse 均实测过）——sticky 侧栏是单一合成层，
+   任何子元素动画都会每帧重绘整层，目录文字随之"抖动"（user feedback + 因果实测 2026-09-22/24） */
+.rm-dot{fill:var(--purple)}
+.rm-caption{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--sub);margin-top:6px;font-variant-numeric:tabular-nums}
 .rm-status{color:var(--purple)}
 /* 收敛序列：虚影凝固 + 章砸落（play-seq 类一次性触发；converged 静态终态） */
 .rm-stamp-text{font-family:var(--serif);font-weight:900;font-size:15px;fill:var(--red);opacity:0}
@@ -218,7 +222,7 @@ nav .nav-item.done .ok{
 }
 /* 阶段签（R5）：铭牌 + 7 格进度 */
 .run-strip{display:inline-flex;align-items:center;gap:5px;margin-left:auto}
-.run-strip-label{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--purple);letter-spacing:.08em}
+.run-strip-label{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--purple);letter-spacing:.08em;white-space:nowrap}
 .run-strip .tick{width:7px;height:7px;border-radius:1px;display:inline-block}
 .run-strip .tick.done{background:var(--ink);border:1px solid var(--ink)}
 .run-strip .tick.now{border:2px solid var(--purple);animation:tickpulse 2s ease-in-out infinite}
@@ -233,7 +237,7 @@ nav .nav-item.done .ok{
 .rc-inner{
   border:1px solid var(--line-ink);padding:22px 26px;text-align:center;position:relative;
 }
-.rc-kicker{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--sub)}
+.rc-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.3em;color:var(--sub)}
 .rc-title{font-family:var(--serif);font-weight:900;font-size:26px;color:var(--ink);margin:8px 0 6px}
 .rc-stats{font-family:var(--mono);font-size:11px;color:var(--sub)}
 .rc-chapters{display:flex;justify-content:center;gap:8px;margin:12px 0}
@@ -242,7 +246,7 @@ nav .nav-item.done .ok{
   border:1px solid var(--purple);border-radius:2px;padding:2px 8px;letter-spacing:.1em;
 }
 .rc-motto{font-family:var(--serif);font-size:13px;color:var(--ink);margin:10px 0 14px}
-.rc-foot{border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--green)}
+.rc-foot{border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--green)}
 .rc-stamp{
   position:absolute;top:-12px;right:14px;
   font-family:var(--serif);font-weight:900;font-size:12px;color:var(--red);
@@ -251,9 +255,9 @@ nav .nav-item.done .ok{
 }
 .chap-body{position:relative}
 
-/* reduced-motion：叙事层动画全量降级为静态终态 */
+/* reduced-motion：叙事层 + 基础层动画全量降级为静态终态 */
 @media (prefers-reduced-motion:reduce){
-  .rm-dot{animation:none}
+  html{scroll-behavior:auto}
   .run-strip .tick.now{animation:none}
   .check li:has(input:checked) span::after{animation:none}
   .first-ritual{animation:none}
@@ -293,6 +297,8 @@ main>section:nth-child(3){animation-delay:.12s}
 .chap-body{flex:1;min-width:0;padding-top:12px;border-top:4px double var(--line-ink)}
 
 h1{font-family:var(--serif);font-weight:900;font-size:38px;line-height:1.25;margin-bottom:14px;letter-spacing:-.01em}
+/* 章节页 h1（ChapterHead）：沿用章标题版式，仅语义升级 */
+h1.chap-title{font-weight:700;font-size:27px;line-height:1.3;margin:0 0 8px;letter-spacing:0}
 h2{font-family:var(--serif);font-weight:700;font-size:27px;margin:0 0 8px;letter-spacing:0}
 h3{
   font-family:var(--serif);font-weight:700;font-size:17.5px;margin:44px 0 12px;
@@ -347,11 +353,15 @@ details.fold[open] summary::before{transform:rotate(90deg)}
 details.fold summary:hover{color:var(--purple)}
 details.fold[open] summary{border-bottom:1px dashed var(--line);margin-bottom:14px}
 details.fold[open]::after{
-  content:'已阅';position:absolute;top:38px;right:16px;
+  content:'已阅';position:absolute;top:-13px;right:16px;
   font-family:var(--serif);font-weight:900;font-size:15px;color:var(--red);
   border:2px solid var(--red);border-radius:4px;padding:2px 8px;
-  transform:rotate(-7deg);opacity:.5;pointer-events:none;
+  transform:rotate(-7deg);opacity:.5;pointer-events:none;background:var(--paper2);
 }
+/* 报错速查表：错误文本是不可断行的长 token 串，必须允许 anywhere 断行 */
+.err-ref{margin:16px 0}
+.err-ref td{overflow-wrap:anywhere;min-width:8em}
+.err-ref td:first-child{font-family:var(--mono);font-size:12px}
 /* 总览「你会带走」清单：实验记录页——红色登记线 + 序号铅字 */
 .you-get{
   position:relative;margin:4px 0 24px;padding:16px 20px 14px 22px;
@@ -366,7 +376,11 @@ html.dark .you-get{box-shadow:5px 5px 0 color-mix(in srgb,var(--purple) 26%,tran
 }
 .you-get-title::before{content:'';width:18px;height:3px;background:var(--accent);flex-shrink:0}
 .you-get ul{margin:0;padding-left:2px;list-style:none;counter-reset:yg;color:var(--ink);font-size:13.8px;line-height:2}
-.you-get li{counter-increment:yg;display:flex;gap:10px;align-items:baseline}
+.you-get li{
+  counter-increment:yg;display:flex;gap:10px;align-items:baseline;
+}
+/* 内容整体包在单个 <span> 里（part1.jsx），避免裸文本与 <b> 各自成为 flex item 被拉开 */
+.you-get li>span{min-width:0}
 .you-get li::before{
   content:counter(yg,decimal-leading-zero);
   font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--purple);
@@ -377,7 +391,7 @@ html.dark .you-get{box-shadow:5px 5px 0 color-mix(in srgb,var(--purple) 26%,tran
   font-family:var(--serif);font-weight:900;font-size:3.2em;line-height:.88;
   float:left;padding:3px 12px 0 0;color:var(--purple);
 }
-.chap-meta{display:flex;gap:0;margin:14px 0 6px;font-size:12px;color:var(--sub);font-family:var(--mono)}
+.chap-meta{display:flex;flex-wrap:wrap;row-gap:6px;margin:14px 0 6px;font-size:12px;color:var(--sub);font-family:var(--mono)}
 .chap-meta span{border:1px solid var(--line-ink);padding:3px 12px;border-radius:2px}
 .chap-meta span+span{border-left:none}
 
@@ -482,9 +496,10 @@ details p{font-size:13.5px;color:var(--ink);margin:10px 0 2px 22px}
 
 /* ---------- 进度 checklist ---------- */
 .check{list-style:none;padding-left:0;border-top:1.5px solid var(--line-ink)}
-.check li{display:flex;align-items:flex-start;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.check li{padding:9px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+.check li label{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
 .check input{margin-top:6px;accent-color:var(--purple);width:16px;height:16px;flex-shrink:0}
-.check li:has(input:checked){color:var(--sub);text-decoration:line-through;text-decoration-color:var(--purple);text-decoration-thickness:1.5px}
+.check li:has(input:checked){color:var(--sub)}
 
 /* ---------- 阶梯：一条装订线串起的五格 ---------- */
 .ladder{margin:30px 0;position:relative}
@@ -523,7 +538,7 @@ html.dark .ladder::before{opacity:.34}
 .pager-btn:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--purple);border-bottom-color:var(--line-ink)}
 .pager-btn:active{transform:translate(1px,1px);box-shadow:none}
 .pager-btn.next{margin-left:auto;text-align:right;align-items:flex-end}
-.pager-dir{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--purple)}
+.pager-dir{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.18em;color:var(--purple)}
 .pager-btn b{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
 .pager-preview{font-style:normal;font-size:11.5px;color:var(--sub);line-height:1.5}
 .pager-hint{
@@ -568,7 +583,9 @@ input[type=range]{accent-color:var(--purple)}
 .tok-count{font-size:12.5px;color:var(--sub);margin-top:8px;font-family:var(--mono)}
 .tok-count b{color:var(--purple)}
 .attn-head{font-size:12.5px;color:var(--sub);margin-top:10px;min-height:20px}
-.attn-cell{width:46px;height:26px;border:1px solid var(--card);cursor:pointer;text-align:center;line-height:26px;font-family:var(--mono);font-size:11px}
+.attn-cell{width:46px;height:26px;border:1px solid var(--card);text-align:center;line-height:26px;font-family:var(--mono);font-size:11px}
+.attn-q{width:100%;height:100%;background:none;border:none;padding:0;font:inherit;white-space:nowrap;cursor:pointer}
+.attn-q:focus-visible{outline:2px solid var(--purple);outline-offset:-2px}
 .sl-wrap{display:flex;gap:26px;flex-wrap:wrap}
 .sl-wrap canvas{background:var(--paper);border:1.5px solid var(--line-ink);border-radius:var(--r)}
 .sl-panel{flex:1;min-width:250px;font-size:13px}
@@ -611,6 +628,8 @@ footer{
   .layout{border-inline:none}
   main{padding:32px 22px 80px}
   .chap-digit{font-size:64px}
+  /* 抽屉打开：背景内容退出 tab 序与读屏树（配合 Esc 关闭与焦点归还） */
+  body.drawer-open .topbar,body.drawer-open main{visibility:hidden}
   /* 侧栏变抽屉：默认推出屏幕外 */
   nav.sidebar{
     position:fixed;left:0;top:0;height:100vh;width:288px;z-index:100;
@@ -676,9 +695,16 @@ html.dark .progress-bar>div{background:var(--purple)}
 .pal-btn{font-family:var(--mono);letter-spacing:.04em}
 @media (max-width:900px){.pal-btn{display:none}}
 
-/* ---------- a11y：键盘焦点可见 ---------- */
+/* ---------- a11y：键盘焦点可见 + 跳转正文 ---------- */
 :focus-visible{outline:2.5px solid var(--purple);outline-offset:2px;border-radius:2px}
 .check input:focus-visible,details summary:focus-visible{outline-offset:1px}
+.skip-link{
+  position:fixed;left:16px;top:10px;z-index:300;
+  transform:translateY(-300%);background:var(--purple);color:#fff;
+  font-size:13px;padding:8px 16px;border-radius:var(--r);border:none;
+}
+.skip-link:focus-visible{transform:none}
+#main:focus{outline:none}
 
 /* ---------- 留存钩子：可玩入口 / 续读卡 / 完成反馈 ---------- */
 .play-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:24px 0 6px}
@@ -690,7 +716,7 @@ html.dark .progress-bar>div{background:var(--purple)}
 }
 .play-card:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--purple)}
 .play-card:active{transform:translate(1px,1px);box-shadow:none}
-.play-tag{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--purple)}
+.play-tag{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.18em;color:var(--purple)}
 .play-card b{font-family:var(--serif);font-size:16.5px;font-weight:700}
 .play-desc{font-size:12px;color:var(--sub);line-height:1.6}
 .play-go{font-family:var(--mono);font-size:11.5px;color:var(--purple);margin-top:5px}
@@ -700,9 +726,11 @@ html.dark .progress-bar>div{background:var(--purple)}
   background:var(--purple-soft);border:1.5px solid var(--purple);border-radius:var(--r);
   padding:12px 16px;cursor:pointer;transition:transform .12s,box-shadow .12s;
 }
+.colab-cta .resume-tag{background:var(--blue)}
+.colab-fold{margin:16px 0 22px}
 .resume:hover{transform:translate(-1.5px,-1.5px);box-shadow:3px 3px 0 var(--purple)}
 .resume-tag{
-  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.2em;
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.2em;
   color:#fff;background:var(--purple);padding:3px 9px;border-radius:2px;
   flex-shrink:0;transform:rotate(-1.5deg);
 }
@@ -713,11 +741,6 @@ html.dark .progress-bar>div{background:var(--purple)}
 html.dark .resume-tag{color:#141218}
 
 nav a.nav-item .ok{color:var(--purple);font-weight:700;font-size:12.5px;flex-shrink:0}
-nav a.nav-item.done .lb{
-  text-decoration:line-through;
-  text-decoration-color:color-mix(in srgb,var(--purple) 45%,transparent);
-  text-decoration-thickness:1.5px;
-}
 
 @keyframes demoflash{
   0%,55%{box-shadow:0 0 0 3px var(--purple),5px 5px 0 var(--purple)}
@@ -728,6 +751,11 @@ nav a.nav-item.done .lb{
 .progress-cheer{
   display:block;margin-top:8px;padding-top:8px;border-top:1.5px dotted var(--line);
   color:var(--purple);font-weight:600;
+}
+
+/* reduced-motion 补充：这几条的定义在第一个 reduce 块之后，此处才能覆盖（同特异性后者胜） */
+@media (prefers-reduced-motion:reduce){
+  .pal,.pal-scrim,.demo.flash{animation:none}
 }
 
 /* ---------- 滚动渐显（渐进增强，不支持则无动画） ---------- */

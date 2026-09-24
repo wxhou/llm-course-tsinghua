@@ -43,10 +43,12 @@ export default function BpeDemo() {
       <p style={{ fontSize: '12.5px', color: 'var(--sub)' }}>
         在下面输入一段文本（当作迷你语料），拖动滑块控制合并次数，观察 token 怎么从单字符一步步长大。这就是 BPE 训练的全部逻辑。
       </p>
-      <textarea rows={2} value={text} onChange={e => setText(e.target.value)} />
+      <textarea rows={2} value={text} onChange={e => setText(e.target.value)} aria-label="迷你语料" />
       <div className="ctrl">
-        <label>合并次数：<b>{n}</b></label>
-        <input type="range" min="0" max="30" value={n} onChange={e => setN(+e.target.value)} style={{ flex: 1 }} />
+        <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span>合并次数：<b>{n}</b></span>
+          <input type="range" min="0" max="30" value={n} onChange={e => setN(+e.target.value)} style={{ flex: 1 }} />
+        </label>
       </div>
       <div>
         {toks.map((t, i) => (

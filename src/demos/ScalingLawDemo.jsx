@@ -72,20 +72,27 @@ export default function ScalingLawDemo() {
     <div className="demo" id="demo-scaling">
       <div className="demo-title">交互演示 2 · Scaling Law 拟合器</div>
       <div className="sl-wrap">
-        <canvas ref={canvasRef} width="520" height="340" />
+        <canvas ref={canvasRef} width="520" height="340" role="img"
+          aria-label="Scaling Law 幂律损失拟合曲线（双对数坐标），横轴训练算力，纵轴验证损失" />
         <div className="sl-panel">
           <p>损失公式：L(C) = E + A·(C / 10<sup>21</sup>)<sup>−α</sup>（双对数坐标。算力以 10<sup>21</sup> FLOPs 为单位归一，A 即 C = 10<sup>21</sup> 处幂律项的取值）</p>
           <div className="ctrl">
-            <label>E（不可约损失）= <span className="val">{E.toFixed(2)}</span></label>
-            <input type="range" min="10" max="30" value={E * 10} onChange={e => setE(+e.target.value / 10)} style={{ flex: 1 }} />
+            <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>E（不可约损失）= <span className="val">{E.toFixed(2)}</span></span>
+              <input type="range" min="10" max="30" value={E * 10} onChange={e => setE(+e.target.value / 10)} style={{ flex: 1 }} aria-label="E，不可约损失" />
+            </label>
           </div>
           <div className="ctrl">
-            <label>A = <span className="val">{A.toFixed(1)}</span></label>
-            <input type="range" min="2" max="40" value={A * 10} onChange={e => setA(+e.target.value / 10)} style={{ flex: 1 }} />
+            <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>A = <span className="val">{A.toFixed(1)}</span></span>
+              <input type="range" min="2" max="40" value={A * 10} onChange={e => setA(+e.target.value / 10)} style={{ flex: 1 }} aria-label="A，幂律项系数" />
+            </label>
           </div>
           <div className="ctrl">
-            <label>α = <span className="val">{alpha.toFixed(2)}</span></label>
-            <input type="range" min="10" max="60" value={alpha * 100} onChange={e => setAlpha(+e.target.value / 100)} style={{ flex: 1 }} />
+            <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span>α = <span className="val">{alpha.toFixed(2)}</span></span>
+              <input type="range" min="10" max="60" value={alpha * 100} onChange={e => setAlpha(+e.target.value / 100)} style={{ flex: 1 }} aria-label="alpha，幂律指数" />
+            </label>
           </div>
           <p style={{ fontSize: '12px', color: 'var(--sub)' }}>
             蓝点 = 一些公开模型的近似位置（数值仅示意量级）。α 越大，损失随算力下降越快。
