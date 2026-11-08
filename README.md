@@ -4,7 +4,16 @@
 
 ## 学习路径
 
-| 章节 | 内容 | 交互演示 |
+站点按 12 个 phase 组织（沿用上游 [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch) 的编号），当前已发布两个：
+
+| phase | 内容 | 课 |
+|---|---|---|
+| P10 LLM 从零训练 | 从 tokenizer 到 0.1B，含数据管线与三条后训练路线 | HW1–HW4 |
+| P14 Agent 工程 | 可验证环境 + Harness + Self-judge | 期末 |
+
+其余 phase（P01/P03/P05/P07/P09/P11/P13/P15/P17/P18）已在数据层登记，随内容落地逐个出现在目录中；没有内容的 phase 不显示。
+
+| 课 | 内容 | 交互演示 |
 |---|---|---|
 | HW1 | Tokenizer 与 Transformer：从字符到 0.1B | BPE 分词器、注意力热力图 |
 | HW2 | 手写 Triton Attention Kernel | — |
@@ -18,16 +27,17 @@
 
 ```bash
 npm install
-npm run dev        # 开发服务器（默认 5173）
-npm run build      # 生产构建 → dist/
-npm run preview    # 预览生产构建
+npm run dev            # 开发服务器（默认 5173）
+npm run build          # 生产构建 → dist/
+npm run preview        # 预览生产构建
+npm run check:content  # 校验 phase 地图与验收项结构
 ```
 
 无后端、无账户：学习进度（Checklist 勾选）、主题偏好、续读位置仅保存在浏览器 localStorage，本站不收集、不上传任何数据。
 
 ## 技术栈
 
-- **框架**：React 18 + Vite 5（单页，无路由）
+- **框架**：React 18 + Vite 5（单页 + hash 路由）
 - **公式**：KaTeX（按需字体子集 `src/lib/katex-subset.css`，仅捆绑 Main/Math/Size/AMS 共 11 个 woff2，约 158KB）
 - **代码高亮**：highlight.js（core 按语言注册）
 - **字体**：Fraunces / Space Grotesk / JetBrains Mono，经 `fonts.loli.net` 境内镜像加载，系统字体栈回退
@@ -37,10 +47,15 @@ npm run preview    # 预览生产构建
 
 ```
 src/
-├── App.jsx           # 顶栏、侧栏目录、⌘K 跳转面板、主题
-├── content/          # 章节内容（part1: Overview+HW1+HW2, part2: HW3+HW4+期末+计划）
+├── App.jsx           # 顶栏、侧栏目录、⌘K 跳转面板、主题、路由分发
+├── routes.js         # 目录表、hash 解析（含旧 slug 兼容）、翻页顺序
+├── content/
+│   ├── phases/       # phase 地图单一真源（12 个 phase 数据 + 构建期校验）
+│   ├── components.jsx# 课节点 → 正文组件
+│   ├── part1.jsx     # Overview + HW1 + HW2
+│   └── part2.jsx     # HW3 + HW4 + 期末 + 计划
 ├── demos/            # 交互演示（BPE / Attention / ScalingLaw）
-├── components/       # Checklist 进度、Palette
+├── components/       # PhasePage 课目条、Checklist 进度、Palette
 ├── lib/              # UI 原语（公式/代码块/Callout/作业卡/思考题）+ katex 子集
 └── styles.css        # 全站样式（纸面×编辑部设计语言，深浅双主题）
 ```

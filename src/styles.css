@@ -769,3 +769,13 @@ nav a.nav-item .ok{color:var(--purple);font-weight:700;font-size:12.5px;flex-shr
     @keyframes reveal{from{opacity:.01;transform:translateY(18px)}to{opacity:1;transform:none}}
   }
 }
+
+/* ---------- phase 课目切换条（phase 页顶部；一次只渲染一课） ---------- */
+.phase-bar{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.phase-bar-kicker{display:inline-flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--sub)}
+.phase-bar-kicker em{font-style:normal;letter-spacing:0;opacity:.75}
+.phase-bar ol{display:flex;gap:6px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
+.phase-bar a{display:inline-flex;gap:7px;align-items:baseline;padding:3px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;color:var(--sub);text-decoration:none;transition:border-color .15s,color .15s}
+.phase-bar a:hover{border-color:var(--line-ink);color:var(--ink)}
+.phase-bar a.active{background:var(--purple-soft);border-color:var(--purple);color:var(--purple-ink);font-weight:700}
+.phase-bar a em{font-family:var(--mono);font-style:normal;font-size:10px;opacity:.7}

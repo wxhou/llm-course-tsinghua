@@ -15,6 +15,7 @@ export const PHASE_LABELS = {
   hw2: 'PHASE 02 · KERNEL',
   hw3: 'PHASE 03 · DATA',
   hw4: 'PHASE 04 · ALIGN',
+  fin: 'PHASE 05 · DEPLOY',
   final: 'PHASE 05 · DEPLOY',
   plan: 'TRAINING SCHEDULE',
 }

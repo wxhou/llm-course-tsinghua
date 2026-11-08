@@ -1,32 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
-import { Overview, HW1, HW2 } from './content/part1.jsx'
-import { HW3, HW4, Final, Plan } from './content/part2.jsx'
-import { ProgressBox, useGlobalProgress, useChapterStates, isArchived } from './components/Progress.jsx'
+import { Overview } from './content/part1.jsx'
+import { Plan } from './content/part2.jsx'
+import { ProgressBox, useGlobalProgress, usePhaseStates, isArchived, lessonStats } from './components/Progress.jsx'
+import PhasePage from './components/PhasePage.jsx'
 import Palette from './components/Palette.jsx'
 import { PrevNext } from './lib/ui.jsx'
-import { NAV, parseHash, consumePendingAnchor, scrollBehavior } from './routes.js'
+import { NAV, parseRoute, consumePendingAnchor, scrollBehavior } from './routes.js'
 import { NarrativeContext } from './lib/narrative.jsx'
+import { PHASE_BY_ID, LESSON_BY_ID, NAV_PHASES } from './content/phases/index.js'
 
-/* 单一路由表：侧栏/⌘K/翻页器共用（routes.js 导出，此处 re-export 便于既有引用） */
-export { NAV }
-
-const SECTIONS = { overview: Overview, hw1: HW1, hw2: HW2, hw3: HW3, hw4: HW4, final: Final, plan: Plan }
+/* 元页面（非 phase）：总览与学习计划 */
+const META_SECTIONS = { overview: Overview, plan: Plan }
 
 /* hash 路由：hashchange 驱动；URL 规范化（默认态/未知/旧格式/纯格式变化）一律 replaceState，不推历史栈 */
 function useHashRoute() {
-  const [slug, setSlug] = useState(parseHash)
+  const [route, setRoute] = useState(parseRoute)
   useEffect(() => {
     const normalize = () => {
-      const s = parseHash()
-      setSlug(s)
-      const want = '#/' + s
+      const r = parseRoute()
+      setRoute(r)
+      const want = '#/' + r.key
       if (location.hash !== want) history.replaceState(null, '', want)
     }
     normalize()
     window.addEventListener('hashchange', normalize)
     return () => window.removeEventListener('hashchange', normalize)
   }, [])
-  return slug
+  return route
 }
 
 function useTheme() {
@@ -95,26 +95,25 @@ function TopBar({ dark, toggleTheme, onMenu, progress, onPalette }) {
   )
 }
 
-/* 章节完成度/存档态：Progress.jsx 的 useChapterStates（注册表 × localStorage，事件驱动） */
-
-function Sidebar({ open, onNavigate, slug }) {
-  const states = useChapterStates()
+function Sidebar({ open, onNavigate, route }) {
+  const states = usePhaseStates()
 
   return (
     <nav className={`sidebar ${open ? 'open' : ''}`}>
       <div className="brand">从零训练大模型</div>
       <div className="brand-sub">基于清华 KEG《高级机器学习》作业阶梯重建的自学课程</div>
       {NAV.map(n => {
-        const p = n.prefix && states[n.prefix]
+        const p = n.kind === 'phase' ? states[n.slug] : null
         const isDone = p && p.total > 0 && p.done === p.total
+        const active = n.kind === 'phase' ? route.phaseId === n.slug : route.meta === n.slug
         return (
-          <a key={n.slug} href={'#/' + n.slug} className={`nav-item ${slug === n.slug ? 'active' : ''} ${isDone ? 'done' : ''}`} onClick={onNavigate}>
+          <a key={n.slug} href={'#/' + n.slug} className={`nav-item ${active ? 'active' : ''} ${isDone ? 'done' : ''}`} onClick={onNavigate}>
             <span className="no">{n.no}</span>
             <span className="lb">
               {n.label}
               <span className="nav-preview">{n.preview}</span>
             </span>
-            {isDone ? <span className="ok" title="本章清单全部完成">✓</span> : <span className="leader" aria-hidden="true" />}
+            {isDone ? <span className="ok" title="本阶段验收全部完成">✓</span> : <span className="leader" aria-hidden="true" />}
           </a>
         )
       })}
@@ -128,8 +127,26 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [palOpen, setPalOpen] = useState(false)
   const progress = useScrollProgress()
-  const slug = useHashRoute()
-  const nav = NAV.find(n => n.slug === slug)
+  const route = useHashRoute()
+
+  /* 进度变化时刷新叙事层：阶段签的存档态需随勾选即时更新，不能等路由切换 */
+  const [, setProgressTick] = useState(0)
+  useEffect(() => {
+    const on = () => setProgressTick(t => t + 1)
+    window.addEventListener('llmcourse-progress', on)
+    window.addEventListener('change', on)
+    return () => {
+      window.removeEventListener('llmcourse-progress', on)
+      window.removeEventListener('change', on)
+    }
+  }, [])
+
+  const nav = NAV.find(n => (n.kind === 'phase' ? n.slug === route.phaseId : n.slug === route.meta)) || NAV[0]
+  const phase = route.phaseId ? PHASE_BY_ID[route.phaseId] : null
+  const lesson = route.lessonId ? LESSON_BY_ID[route.lessonId] : null
+  const MetaSection = route.meta ? META_SECTIONS[route.meta] : null
+  const stats = lesson ? lessonStats(lesson) : { done: 0, total: 0 }
+  const archived = route.phaseId ? isArchived(route.phaseId) : false
 
   /* 抽屉打开时锁正文滚动；背景（顶栏/正文）退出 tab 序与读屏树；关闭时焦点归还触发按钮 */
   const wasOpen = useRef(false)
@@ -166,9 +183,9 @@ export default function App() {
 
   /* 续读记录：路由驱动写入；skip-overview 守卫——总览停留不覆盖真实续读记录 */
   useEffect(() => {
-    if (slug === 'overview') return
-    localStorage.setItem('llm-last', JSON.stringify({ href: '#/' + slug, label: nav.label, ts: Date.now() }))
-  }, [slug, nav])
+    if (route.meta === 'overview') return
+    localStorage.setItem('llm-last', JSON.stringify({ href: '#/' + route.key, label: nav.label, ts: Date.now() }))
+  }, [route.key, route.meta, nav])
 
   /* 路由渲染完成后：消费跨页 pending anchor，否则回顶 */
   useEffect(() => {
@@ -181,15 +198,14 @@ export default function App() {
     } else {
       window.scrollTo(0, 0)
     }
-  }, [slug])
+  }, [route.key])
 
-  const Section = SECTIONS[slug]
-  const states = useChapterStates()
-  const stats = states[nav.prefix] || { done: 0, total: 0 }
-  /* 阶段签注入：{slug, phaseStates}（slug 键 → {archived}），ChapterHead/PhaseStrip 经 Context 消费 */
+  /* 阶段签注入：phases 列出已发布 phase，phaseStates 提供存档态 */
   const narrative = {
-    slug,
-    phaseStates: Object.fromEntries(NAV.map(n => [n.slug, { archived: n.prefix ? isArchived(n.prefix) : false }])),
+    slug: route.meta || route.lessonId,
+    phaseId: route.phaseId,
+    phases: NAV_PHASES.map(p => ({ id: p.id, title: p.title })),
+    phaseStates: Object.fromEntries(NAV_PHASES.map(p => [p.id, { archived: isArchived(p.id) }])),
   }
 
   return (
@@ -198,17 +214,19 @@ export default function App() {
       <TopBar dark={dark} toggleTheme={toggleTheme} onMenu={() => setMenuOpen(true)} progress={progress} onPalette={() => setPalOpen(true)} />
       <NarrativeContext.Provider value={narrative}>
         <div className="layout">
-          <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} slug={slug} />
+          <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} route={route} />
           <main id="main" tabIndex={-1}>
-            <div className={nav.prefix && isArchived(nav.prefix) ? 'chap-complete' : ''}>
-              <Section />
-              <PrevNext slug={slug} done={stats.done} total={stats.total} />
+            <div className={archived ? 'chap-complete' : ''}>
+              {MetaSection
+                ? <MetaSection />
+                : <PhasePage phase={phase} lesson={lesson} />}
+              <PrevNext routeKey={route.meta || route.lessonId} done={stats.done} total={stats.total} />
             </div>
           </main>
         </div>
       </NarrativeContext.Provider>
       <div className={`scrim ${menuOpen ? 'show' : ''}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
-      <Palette open={palOpen} onClose={() => setPalOpen(false)} slug={slug} />
+      <Palette open={palOpen} onClose={() => setPalOpen(false)} slug={route.meta || route.lessonId} />
     </>
   )
 }

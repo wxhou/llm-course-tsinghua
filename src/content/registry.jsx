@@ -44,7 +44,7 @@ export const FIN_CHECK = [
   { id: 'fin-5', text: 'W9+：环境判分接入 GRPO 做 RLVR 训练，对比训练前后——期末完整版' },
 ]
 
-/* 按存储前缀分组（与 routes.js NAV 的 prefix 一致：final→fin） */
+/* 按验收组前缀分组；phase 数据以 acceptancePrefix 引用（期末课 id 为 fin） */
 export const CHECKS = {
   hw1: HW1_CHECK,
   hw2: HW2_CHECK,

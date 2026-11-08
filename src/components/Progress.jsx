@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ALL_ITEMS, CHECKS } from '../content/registry.jsx'
+import { CHECKS } from '../content/registry.jsx'
+import { PHASE_BY_ID, PUBLISHED_PHASES, NAV_PHASES } from '../content/phases/index.js'
 
 const KEY = id => 'llmcourse-' + id
 const EVT = 'llmcourse-progress'
@@ -11,34 +12,52 @@ export function ProgressProvider({ children }) {
   return <>{children}</>
 }
 
-/* 章节完成度统计（从 App.jsx 迁入导出，供翻页器/阶段签/侧栏共用） */
-export function chapterStats(prefix) {
-  const items = CHECKS[prefix]
-  if (!items) return { done: 0, total: 0 }
+const lessonItems = lesson =>
+  (lesson.acceptancePrefix && CHECKS[lesson.acceptancePrefix]) || []
+
+/* 课级进度：由注册表 × localStorage 派生，不写第二份真源 */
+export function lessonStats(lesson) {
+  const items = lessonItems(lesson)
   return {
     done: items.filter(it => localStorage.getItem(KEY(it.id)) === '1').length,
     total: items.length,
   }
 }
 
-/* 单向存档判定：持久标记 llm-ckpt-{prefix} 一经写入不移除（design 决策 5） */
-export function isArchived(prefix) {
-  if (!prefix || !CHECKS[prefix]) return false
-  return !!localStorage.getItem('llm-ckpt-' + prefix)
+/* phase 级进度 = 其下各课之和（App/Sidebar/PhasePage/翻页器共用） */
+export function phaseStats(phaseId) {
+  const phase = PHASE_BY_ID[phaseId]
+  if (!phase) return { done: 0, total: 0 }
+  return phase.lessons.reduce((acc, l) => {
+    const s = lessonStats(l)
+    return { done: acc.done + s.done, total: acc.total + s.total }
+  }, { done: 0, total: 0 })
 }
 
-/* 每章状态（含存档态）：App/Sidebar/PhaseStrip 共用，事件驱动重渲染 */
-export function useChapterStates() {
+/* 单向存档判定：持久标记 llm-ckpt-phase-{id} 一经写入不移除（design 决策 5） */
+export function isArchived(phaseId) {
+  if (!phaseId) return false
+  return !!localStorage.getItem('llm-ckpt-phase-' + phaseId)
+}
+
+/* phase 是否已全部验收：不带验收项的课不参与判定 */
+export function phaseComplete(phase) {
+  const scored = phase.lessons.filter(l => lessonItems(l).length > 0)
+  if (!scored.length) return false
+  return scored.every(l => {
+    const s = lessonStats(l)
+    return s.done === s.total
+  })
+}
+
+/* 每 phase 状态（含存档态）：App/Sidebar/PhasePage/PhaseStrip 共用，事件驱动重渲染 */
+export function usePhaseStates() {
   const [states, setStates] = useState({})
   useEffect(() => {
     const refresh = () => {
       const m = {}
-      for (const [pre, items] of Object.entries(CHECKS)) {
-        m[pre] = {
-          done: items.filter(it => localStorage.getItem(KEY(it.id)) === '1').length,
-          total: items.length,
-          archived: isArchived(pre),
-        }
+      for (const phase of PUBLISHED_PHASES) {
+        m[phase.id] = { ...phaseStats(phase.id), archived: isArchived(phase.id) }
       }
       setStates(m)
     }
@@ -63,25 +82,28 @@ export function ProgressBox() {
   )
 }
 
-/* 全站 Checklist 完成度：静态注册表 × localStorage（不依赖当前页 DOM）。
+/* 全站完成度：已发布 phase 的验收项之和（不依赖当前页 DOM）。
    收敛与存档检测的单一落点（design 决策 8）。 */
 export function useGlobalProgress() {
-  const [counts, setCounts] = useState({ done: 0, total: ALL_ITEMS.length })
+  const [counts, setCounts] = useState({ done: 0, total: 0 })
   useEffect(() => {
     const refresh = () => {
-      const done = ALL_ITEMS.filter(it => localStorage.getItem(KEY(it.id)) === '1').length
-      setCounts({ done, total: ALL_ITEMS.length })
-      // 收敛检测：最后一项勾上时写入持久收敛日期（单向），并广播一次性序列信号
-      if (done === ALL_ITEMS.length && !localStorage.getItem('llm-converged-at')) {
+      const done = PUBLISHED_PHASES.reduce((n, p) => n + phaseStats(p.id).done, 0)
+      const total = PUBLISHED_PHASES.reduce((n, p) => n + phaseStats(p.id).total, 0)
+      setCounts({ done, total })
+
+      // 新完成的 phase → 持久存档标记（写入后不移除 = 单向）
+      for (const phase of PUBLISHED_PHASES) {
+        if (phaseComplete(phase) && !localStorage.getItem('llm-ckpt-phase-' + phase.id)) {
+          localStorage.setItem('llm-ckpt-phase-' + phase.id, new Date().toISOString())
+        }
+      }
+
+      // 收敛：全部已发布 phase 均存档；时间戳单向，新增 phase 不重置
+      const converged = PUBLISHED_PHASES.length > 0 && PUBLISHED_PHASES.every(phaseComplete)
+      if (converged && !localStorage.getItem('llm-converged-at')) {
         localStorage.setItem('llm-converged-at', new Date().toISOString())
         window.dispatchEvent(new Event(EVT_CONVERGED))
-      }
-      // 新清空章 → 持久存档标记（写入后不移除 = 单向）
-      for (const [pre, items] of Object.entries(CHECKS)) {
-        const all = items.every(it => localStorage.getItem(KEY(it.id)) === '1')
-        if (all && !localStorage.getItem('llm-ckpt-' + pre)) {
-          localStorage.setItem('llm-ckpt-' + pre, new Date().toISOString())
-        }
       }
     }
     refresh()
@@ -124,11 +146,16 @@ export function Checklist({ items }) {
 /* ---------- 叙事层：训练监控面板 + 首勾仪式（R1/R2/R6） ---------- */
 
 const FATE_PATH = 'M4 10 C 10 13, 14 20, 24 23 S 34 24, 40 27 S 50 26, 58 30 S 70 29, 78 35 S 92 36, 102 40 S 118 41, 128 45 S 148 47, 160 51 S 182 55, 196 58'
-/* 章节刻度 x：path 横跨 4..196，按各章项数累计占比定位（hw1 7/28 起） */
-const TICKS = [
-  { pre: 'hw1', at: 7 / 28 }, { pre: 'hw2', at: 12 / 28 }, { pre: 'hw3', at: 17 / 28 },
-  { pre: 'hw4', at: 23 / 28 }, { pre: 'fin', at: 1 },
-]
+/* phase 刻度 x：path 横跨 4..196，按各 phase 验收项累计占比定位（不再写死 28 项） */
+function buildTicks() {
+  const totals = NAV_PHASES.map(p => ({ id: p.id, n: phaseStats(p.id).total }))
+  const sum = totals.reduce((a, t) => a + t.n, 0)
+  let acc = 0
+  return totals.map(t => {
+    acc += t.n
+    return { pre: t.id, at: sum ? acc / sum : 0 }
+  })
+}
 
 function RunMonitor({ done, total, pct, converged }) {
   const pathRef = useRef(null)
@@ -166,7 +193,7 @@ function RunMonitor({ done, total, pct, converged }) {
         <path d={FATE_PATH} className="rm-fate" fill="none" />
         <path d={FATE_PATH} ref={pathRef} className="rm-progress" fill="none"
           pathLength="100" style={{ strokeDashoffset: 100 - pct }} />
-        {TICKS.map(t => {
+        {buildTicks().map(t => {
           const x = 4 + 192 * t.at
           return isArchived(t.pre)
             ? <line key={t.pre} x1={x} y1="10" x2={x} y2="62" className="rm-tick done" />

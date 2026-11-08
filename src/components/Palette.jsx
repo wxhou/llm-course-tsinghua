@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NAV, navigateToAnchor } from '../routes.js'
+import { LESSON_BY_ID, PHASE_BY_ID } from '../content/phases/index.js'
 
-/* 章节 → 面板标签 */
-const TAG = { overview: '总览', hw1: 'HW1', hw2: 'HW2', hw3: 'HW3', hw4: 'HW4', final: '期末', plan: '计划' }
+/* 小节 → 面板标签：课节点显示其所属 phase，元页面显示固定标签 */
+const META_TAG = { overview: '总览', plan: '计划' }
+const tagFor = id => {
+  const lesson = LESSON_BY_ID[id]
+  if (lesson) return PHASE_BY_ID[lesson.phaseId].title
+  return META_TAG[id] || id
+}
 
 /* 索引 = 全局章节条目（静态） + 当前章 h3 小节（打开时 DOM 扫描，范围限本页）。
    小节 id 永不写入 URL：点击走章节路由 + pending anchor。 */
@@ -10,7 +16,7 @@ function buildIndex(slug) {
   const items = NAV.map(n => ({ kind: 'chapter', href: '#/' + n.slug, slug: n.slug, no: n.no, label: n.label, tag: '章节' }))
   document.querySelectorAll('main section').forEach(sec => {
     if (sec.id !== slug) return
-    const tag = TAG[sec.id] || sec.id
+    const tag = tagFor(sec.id)
     sec.querySelectorAll('h3').forEach((h, i) => {
       if (!h.id) h.id = `${sec.id}-s${i}`
       items.push({ kind: 'anchor', anchor: '#' + h.id, no: '', label: h.textContent.trim(), tag })

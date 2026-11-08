@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import katex from 'katex'
-import { NAV } from '../routes.js'
+import { PATH } from '../routes.js'
 import { PHASE_LABELS, useNarrative } from './narrative.jsx'
 import './katex-subset.css'
 import hljs from 'highlight.js/lib/core'
@@ -163,16 +163,16 @@ export function Refs({ items }) {
   )
 }
 
-/* ---------------- 阶段签：训练隐喻铭牌 + 7 格进度（R5，NarrativeContext 注入） ---------------- */
+/* ---------------- 阶段签：训练隐喻铭牌 + 已发布 phase 进度格（R5，NarrativeContext 注入） ---------------- */
 export function PhaseStrip({ slug }) {
   const narrative = useNarrative()
   return (
     <span className="run-strip" aria-hidden="true">
       <span className="run-strip-label">{PHASE_LABELS[slug]}</span>
-      {NAV.map(n => {
-        const st = narrative?.phaseStates?.[n.slug]
-        const cls = st?.archived ? 'done' : n.slug === slug ? 'now' : 'future'
-        return <i key={n.slug} className={`tick ${cls}`} />
+      {(narrative?.phases || []).map(p => {
+        const st = narrative?.phaseStates?.[p.id]
+        const cls = st?.archived ? 'done' : p.id === narrative?.phaseId ? 'now' : 'future'
+        return <i key={p.id} className={`tick ${cls}`} title={p.title} />
       })}
     </span>
   )
@@ -220,11 +220,11 @@ export function ErrorQuickRef({ items }) {
   )
 }
 
-/* ---------------- 章尾翻页器：上一节/下一节 + 下一章预览 + 本章完成度弱提示（无门槛） ---------------- */
-export function PrevNext({ slug, done, total }) {
-  const idx = NAV.findIndex(n => n.slug === slug)
-  const prev = NAV[idx - 1]
-  const next = NAV[idx + 1]
+/* ---------------- 章尾翻页器：上一节/下一节 + 下一节预览 + 本课完成度弱提示（无门槛） ---------------- */
+export function PrevNext({ routeKey, done, total }) {
+  const idx = PATH.findIndex(n => n.key === routeKey)
+  const prev = idx > 0 ? PATH[idx - 1] : null
+  const next = idx >= 0 ? PATH[idx + 1] : null
   const [, setTick] = useState(0)
   useEffect(() => {
     const on = () => setTick(t => t + 1)  // 同页 Checklist 勾选后弱提示实时更新
@@ -236,14 +236,14 @@ export function PrevNext({ slug, done, total }) {
   return (
     <nav className="pager">
       {prev
-        ? <a className="pager-btn prev" href={'#/' + prev.slug}><span className="pager-dir">← 上一节</span><b>{prev.label}</b></a>
+        ? <a className="pager-btn prev" href={prev.href}><span className="pager-dir">← 上一节</span><b>{prev.label}</b></a>
         : <span />}
       {next && (
-        <a className="pager-btn next" href={'#/' + next.slug}>
+        <a className="pager-btn next" href={next.href}>
           <span className="pager-dir">下一节 →</span>
           <b>{next.label}</b>
           <em className="pager-preview">{next.preview}</em>
-          {total > 0 && <i className="pager-hint">本章清单 {done}/{total} 已完成</i>}
+          {total > 0 && <i className="pager-hint">本课验收 {done}/{total} 已完成</i>}
         </a>
       )}
     </nav>
