@@ -8,6 +8,10 @@ dist.bak/
 # Vite cache artifacts (visible in repo root)
 vite.config.js.timestamp-*.mjs
 
+# Python bytecode (graders/)
+__pycache__/
+*.pyc
+
 # Test artifacts (Playwright)
 playwright-report/
 test-results/
