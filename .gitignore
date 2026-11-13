@@ -60,6 +60,13 @@ CLAUDE.md
 .continue/
 .codex/
 # openspec-pw: begin managed block
+.codebuddy/
+.agents/skills/opsx-e2e/
+.dsh/skills/opsx-e2e/
+.codegraph/
+CODEBUDDY.md
+playwright/.auth/
+tests/playwright/screenshots/
 .opencode/
 .cline/
 .pi/
