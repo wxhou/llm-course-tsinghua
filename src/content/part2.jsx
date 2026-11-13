@@ -254,6 +254,24 @@ export function Final() {
       </Callout>
       </Section>
 
+      <Section id="fin-selfjudge">
+      <p>作业要求报告「self-judge 前后通过率」，但判据不是 judge 说了什么，而是 judge 与真实 verifier 在<b>留出集</b>上的一致程度：取一批环境已经判过分的轨迹，让 judge 在看不到判分结果的前提下重判，把两边的结论对成一张 2×2 表。</p>
+      <CodeBlock file="calibration.json · 校准报告的最小形状" lang="json">
+{`{
+  "judge_model": "<你的 judge 模型>",
+  "n_samples": 30,
+  "threshold": 0.5,
+  "confusion": { "tp": 12, "fp": 4, "tn": 10, "fn": 4 },
+  "agreement": 0.7333
+}`}
+      </CodeBlock>
+      <p>四个格子怎么读：<b>tp</b> 是 judge 判过、verifier 也判过；<b>fp</b> 是 judge 放过但测试没过——最危险的一类，它会让训练信号变脏；<b>fn</b> 是 judge 判死但其实通过；<b>tn</b> 是两边都判不过。一致率 = (tp + tn) / n_samples，但这个数会被类别不平衡带偏：若九成轨迹本来就通过，judge 全判通过也能拿到 0.9。</p>
+      <Callout type="warn" title="校准可信与否，取决于三件事">
+        <p><b>留出</b>：校准样本不能进 judge 的提示词或 few-shot 示例，否则测的是记忆；<b>阈值</b>：judge 给连续分时，阈值按业务代价选（fp 比 fn 贵就把阈值调高），并把取值写进报告；<b>终审权</b>：judge 只触发「再试一次」，最终 reward 仍来自 verifier。</p>
+      </Callout>
+      <p>报告里同时记下 judge 的调用方式与提示词版本：换了 prompt 或模型，这张校准表就作废，必须重测。</p>
+      </Section>
+
       <Section id="fin-5-3">
       <Assignment
         title="FINAL · 端到端：迷你环境 + Harness + Self-judge +（进阶）RLVR"

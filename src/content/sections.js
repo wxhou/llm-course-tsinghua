@@ -277,8 +277,21 @@ export const SECTIONS = [
       },
     },
     {
+      id: 'fin-selfjudge', tier: 't2', feeds: ['fin-5-3'],
+      title: '5.3 Self-judge 与判定校准',
+      deliverable: 'judge 校准报告：留出集上的混淆矩阵、一致率与判定阈值',
+      check: {
+        how: '校验校准报告 calibration.json：样本量、混淆矩阵与一致率是否自洽，阈值是否落在开区间，judge 标识是否明确',
+        interface: 'calibration.json: { judge_model, n_samples, threshold, confusion: {tp,fp,tn,fn}, agreement }',
+        cmd: 'python graders/fin_5_judge.py --calib <你的 calibration.json>',
+        expect: 'n_samples ≥ 20；tp+fp+tn+fn = n_samples；agreement 与 (tp+tn)/n_samples 一致（±0.01）；threshold 在 (0,1)',
+        pitfall: '拿训练集自评——样本进过 judge 的提示词，一致率虚高；或混淆矩阵四格加起来对不上样本数',
+        grader: 'graders/fin_5_judge.py',
+      },
+    },
+    {
       id: 'fin-5-3', tier: 't1',
-      title: '5.3 编程作业',
+      title: '5.4 编程作业',
       deliverable: 'FINAL 的交付物：可验证环境、harness 与轨迹、self-judge 对比报告、judge 校准报告',
       check: {
         how: '检查交付目录：四类产物齐备，对比报告含前后通过率数字',

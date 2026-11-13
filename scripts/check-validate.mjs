@@ -33,6 +33,7 @@ const CASES = [
     for (let i = SECTIONS.length - 1; i >= 0; i--) if (SECTIONS[i].lessonId === 'hw1') SECTIONS.splice(i, 1)
   }, '没有声明任何节'],
   ['完整 phase 的 T1 汇入不足', () => {
+    SECTIONS.splice(SECTIONS.findIndex(s => s.id === 'fin-selfjudge'), 1)
     PHASES.find(p => p.id === 'p14').complete = true
   }, '需要至少 3 条汇入'],
 ]

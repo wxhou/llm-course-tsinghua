@@ -39,7 +39,8 @@ python graders/hw1_1_bpe.py --self-test
 | `hw4_4_accept.py` | 4.4 编程作业 | 三条路线产物、统一评测、人工检视 |
 | `fin_5_1_env.py` | 5.1 接口契约 | schema、题目数、verifier、泄露审计 |
 | `fin_5_2_harness.py` | 5.2 Harness | 轨迹可回放、终止条件自洽 |
-| `fin_5_3_accept.py` | 5.3 编程作业 | 四类产物齐备、通过率与校准数字存在 |
+| `fin_5_judge.py` | 5.3 Self-judge 与判定校准 | 混淆矩阵与一致率自洽、样本量与阈值达标 |
+| `fin_5_3_accept.py` | 5.4 编程作业 | 四类产物齐备、通过率与校准数字存在 |
 
 ## 新增一个节
 

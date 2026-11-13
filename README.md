@@ -70,7 +70,7 @@ src/
 ├── routes.js         # 目录表、hash 解析（含旧 slug 兼容）、翻页顺序
 ├── content/
 │   ├── phases/       # phase 地图单一真源（20 个 phase 数据 + 构建期校验）
-│   ├── sections.js   # 节的单一真源（21 个节：标题/交付物/检查/汇入）
+│   ├── sections.js   # 节的单一真源（22 个节：标题/交付物/检查/汇入）
 │   ├── registry.jsx  # 课级验收项注册表（进度统计的唯一真源）
 │   ├── components.jsx# 课节点 → 正文组件
 │   ├── part1.jsx     # Overview + HW1 + HW2
