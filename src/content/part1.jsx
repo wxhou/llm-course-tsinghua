@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, RunReportCard, PhaseStrip, ErrorQuickRef, COLAB_URL } from '../lib/ui.jsx'
+import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, RunReportCard, ErrorQuickRef, Section, COLAB_URL } from '../lib/ui.jsx'
 import BpeDemo from '../demos/BpeDemo.jsx'
 import AttentionDemo from '../demos/AttentionDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
 import { HW1_CHECK, HW2_CHECK } from './registry.jsx'
 import { navigateToAnchor } from '../routes.js'
+import { SITE } from '../site.js'
 
 /* ============ 首屏钩子：可玩演示入口 + 续读卡 ============ */
 const DEMOS = [
@@ -46,10 +47,9 @@ export function Overview() {
         </a>
       )}
       <div className="kicker">OVERVIEW</div>
-      <PhaseStrip slug="overview" />
-      <h1>从零训练大模型 · 自学阶梯</h1>
+      <h1>{SITE.name}</h1>
       <p className="lead">
-        复刻清华 KEG 唐杰《高级机器学习》（2026 秋）的作业设计。课程课件未公开，本站基于公开转述与开源社区资源重建了整条学习路径：<b>每一格作业 = 数学推导 + 可运行代码 + OJ 式编程作业 + 进阶思考题</b>。
+        按 20 个 phase 组织的 LLM 全栈自学路径：从数学基础到 Agent 工程。每一站都有可验收的终点——<b>数学推导 + 可运行代码 + OJ 式编程作业 + 进阶思考题</b>。当前已上线 P10「LLM 从零训练」与 P14「Agent 工程」，其余 phase 在课程地图中可见。
       </p>
       <div className="you-get">
         <div className="you-get-title">走完这条路径，你会带走</div>
@@ -123,9 +123,9 @@ export function HW1() {
         title="Tokenizer 与 Transformer：从字符到 0.1B"
         oneliner="语言模型读的不是字，是数字——这一章你亲手把文字变成数字、搭出会续写的模型，并跑通一次完整训练。"
         lead="目标：跑通端到端全链路，并且能对每一步回答'为什么'。学完这章，'大模型'应退化为一段你亲手写过的、能解释的代码。"
-        hours="16–20h" prereq="先修自查全部通过"
+        hours="16–20h" prereq="自查全部通过"
       />
-      <h3>1.1 Tokenization：序列建模的第一道压缩</h3>
+      <Section id="hw1-1">
       <p>
         模型只能吃向量。按字符切序列太长（英文一个词被拆成一串字符，注意力平方开销浪费在词内）；按词切无法处理开放词表。<b>Byte Pair Encoding</b> 的答案是让词表从数据里"长"出来：初始化为字节/字符级，反复执行<em>「统计相邻 pair 频次 → 合并最高频者」</em>，直到达到目标词表规模。
       </p>
@@ -134,7 +134,9 @@ export function HW1() {
         <p>合并操作本质是贪心的频次压缩（与 Huffman 同源但保留次序信息）。高频词优先合并 → 常用语料序列变短；低频组合永不合并 → 开放词表，任何新文本都能回退到字节表示，<b>不存在 OOV</b>。GPT-2 的 50,257 词表就是字节级 BPE，一个汉字通常 1–2 个 token。</p>
       </Callout>
 
-      <h3>1.2 Transformer 块：把维度标注出来</h3>
+      </Section>
+
+      <Section id="hw1-2">
       <p>设 batch=B、序列长=T、模型维度 d、头数 h（每头 <M>{'d_h=d/h'}</M>）。一块 Transformer 的数据流：</p>
       <MB>{String.raw`x \;\xrightarrow{\text{LN}}\; Q,K,V = XW_q, XW_k, XW_v \quad (W_q,W_k,W_v\in\mathbb{R}^{d\times d})`}
       </MB>
@@ -149,7 +151,9 @@ export function HW1() {
       </Callout>
       <AttentionDemo />
 
-      <h3>1.3 训练目标与损失</h3>
+      </Section>
+
+      <Section id="hw1-3">
       <Callout type="thm" title="训练的损失就是你每天听说的交叉熵">
         <p>给定语料 <M>{'x_{1:T}'}</M>，自回归模型 <M>{'p_\theta'}</M> 的负对数似然：</p>
         <MB>{String.raw`\mathcal{L}(\theta)=-\sum_{t=1}^{T}\log p_\theta(x_t\mid x_{<t})=-\sum_{t=1}^{T}\underbrace{\log\frac{e^{z_{t,x_t}}}{\sum_j e^{z_{t,j}}}}_{\text{交叉熵}(z_t,\,\text{onehot}(x_t))}`}
@@ -157,7 +161,9 @@ export function HW1() {
         <p>所以"训练语言模型"与"逐位置做 softmax 分类"是同一件事。<b>困惑度</b> <M>{'\text{PPL}=e^{\mathcal{L}/T}'}</M> 是等价口径，中文语料 0.1B 模型训到 PPL 15–25 属正常区间。</p>
       </Callout>
 
-      <h3>1.4 参考实现（对照默写用）</h3>
+      </Section>
+
+      <Section id="hw1-4">
       <CodeBlock file="model.py · 多头注意力（minGPT 风格）" lang="python" highlight={[8, 9, 10]}>
 {`import torch, torch.nn as nn, torch.nn.functional as F
 
@@ -194,7 +200,9 @@ class CausalSelfAttention(nn.Module):
           <a href={COLAB_URL} target="_blank" rel="noreferrer">打开 hw1-starter.ipynb（Colab 新标签）</a>——数据下载、minBPE 分词器、与 1.4 同源的模型、训练循环已全部填好，500 步内看到 loss 从 5.7 降到 ~1.8。3 处练习位对应本章考核点：学习率探索、temperature/top-k 采样、去残差消融。notebook 数据留在你自己的 Colab 会话中，与本站无关；正式 HW1 请换成自己的中文语料。
         </p>
       </details>
-      <h3>1.5 编程作业</h3>
+      </Section>
+
+      <Section id="hw1-5">
       <Assignment
         title="PA1 · 从零训练 nanogpt-mini 并完成受控消融"
         difficulty={2} estHours="8–12h" prereq="本章 1.1–1.4"
@@ -215,6 +223,8 @@ class CausalSelfAttention(nn.Module):
           '消融实验建议先跑「去残差」，它的失败模式最直观（梯度消失、loss 不降）。',
         ]}
       />
+
+      </Section>
 
       <h3>1.6 进阶思考题</h3>
       <Star diff={2} title="Pre-LN 为什么比 Post-LN 稳定？写出两者的残差表达式并分析梯度路径。">
@@ -269,14 +279,16 @@ export function HW2() {
         lead="目标：下探到算子层。同一数学公式，实现差 10 倍速度——学会用 IO 复杂度而非 FLOPs 分析 GPU 性能，这是系统课的思维转变。"
         hours="12–16h" prereq="HW1 完成；CUDA 层次结构的基本概念"
       />
-      <h3>2.1 朴素实现差在哪：一个 IO 视角</h3>
+      <Section id="hw2-1">
       <p>
         教科书实现 <M>{'\text{softmax}(QK^\top/\sqrt{d_h})V'}</M> 需要<b>物化</b> T×T 的注意力矩阵到 HBM（高带宽显存）。A100 的 HBM 带宽约 2TB/s，而片上 SRAM 带宽高一个数量级但只有 20MB——naive 实现把矩阵反复在 HBM↔SRAM 之间搬运，GPU 大量时间在等数据。
       </p>
       <Callout type="thm" title="FlashAttention 赢在哪：不是算得快，是搬得少">
         <p>标准实现需要 <M>{'\Theta(Td + T^2)'}</M> 次 HBM 访问（<M>{'d'}</M> 为头维度）；FlashAttention 通过分块+online softmax 把它降到 <M>{'\Theta(T^2d^2/M)'}</M>（<M>{'M'}</M> 为 SRAM 大小）。两者之比约为 <M>{'M/d^2'}</M>——对典型 <M>{'d=64\sim128'}</M>、几百 KB 的片上 SRAM，约是一个数量级的减少，实测 2–4× 端到端加速、显存 O(T²)→O(T)。</p>
       </Callout>
-      <h3>2.2 Online Softmax：先把递推写出来</h3>
+      </Section>
+
+      <Section id="hw2-2">
       <p>softmax 的平移不变性允许流式计算。设处理到第 <M>{'j'}</M> 块时维护 <M>{'m_j'}</M>（running max）、<M>{'\ell_j'}</M>（running 分母）、<M>{'o_j'}</M>（未归一化输出）。对新块 <M>{'[m_{\text{new}}, s_{\text{new}}, V_{\text{new}}]'}</M>：</p>
       <MB>{String.raw`m_{j+1}=\max(m_j,\,m_{\text{new}}),\qquad
 \ell_{j+1}=e^{m_j-m_{j+1}}\ell_j+e^{m_{\text{new}}-m_{j+1}}\sum_i e^{s_{\text{new},i}},`}
@@ -286,7 +298,9 @@ export function HW2() {
       <Callout type="int" title="边算边修正，凭什么和一次算完的结果一模一样？">
         <p>所有块结束后 <M>{'o_J/\ell_J'}</M> 与一次性算完的 softmax·V 逐位相等——递推只是把「先全算再归一」改成「边算边修正」。划算在于：<M>{'s_{\text{new}}'}</M> 和 <M>{'V_{\text{new}}'}</M> 从 SRAM 读写、<b>从不落 HBM</b>，中间量随算随弃。</p>
       </Callout>
-      <h3>2.3 Triton 参考实现（教学版 softmax kernel）</h3>
+      </Section>
+
+      <Section id="hw2-3">
       <CodeBlock file="softmax_kernel.py" lang="python" highlight={[11]}>
 {`import triton
 import triton.language as tl
@@ -303,11 +317,15 @@ def softmax_kernel(out_ptr, in_ptr, n_cols, BLOCK: tl.constexpr):
     tl.store(out_ptr + row * n_cols + cols, e, mask=cols < n_cols)`}
       </CodeBlock>
       <p>attention 版在其上做两层嵌套：外层遍历 Q 块、内层遍历 K/V 块，每个内层迭代执行上面三条递推。写完的第一件事是 <code>torch.allclose(out, F.scaled_dot_product_attention(q,k,v), atol=1e-2)</code>——<b>数值不过关之前，性能没有意义</b>。</p>
-      <h3>2.4 性能实验方法学</h3>
+      </Section>
+
+      <Section id="hw2-4">
       <Callout type="warn" title="测出来的速度不可信？四个纪律防假数据">
         <p>① <code>torch.cuda.synchronize()</code> 之后再计时，否则测的是 kernel launch 队列；② warmup ≥3 次再测；③ 用 CUDA event 计时而非 <code>time.time()</code>；④ 固定频率跑（笔记本温控降频会毁掉数据）。显存用 <code>torch.cuda.max_memory_allocated()</code>，它才是区分两种实现的真正证据。</p>
       </Callout>
-      <h3>2.5 编程作业</h3>
+      </Section>
+
+      <Section id="hw2-5">
       <Assignment
         title="PA2 · Triton Attention Kernel 与性能归因报告"
         difficulty={4} estHours="10–14h" prereq="2.1–2.4"
@@ -327,6 +345,8 @@ def softmax_kernel(out_ptr, in_ptr, n_cols, BLOCK: tl.constexpr):
           '归因利器：把 attention 的 FLOPs 估算与实测时间相除得"有效算力"，远低于峰值即带宽受限。',
         ]}
       />
+      </Section>
+
       <h3>2.6 进阶思考题</h3>
       <Star diff={2} title="推导 attention 对 V 的 backward，并说明 backward 中的 softmax Jacobian 为什么也可以流式计算。">
         前向记 <M>{'S=QK^{\top}/\sqrt{d_h}'}</M>、<M>{'P=\text{softmax}(S)'}</M>、<M>{'O=PV'}</M>。设 <M>{'D'}</M> 为损失对输出 <M>{'O'}</M> 的上游梯度，则 <M>{'\partial L/\partial V=P^{\top}D'}</M>；对分数的梯度要过 softmax Jacobian <M>{'\text{diag}(P)-PP^{\top}'}</M>，与上游梯度 <M>{'G'}</M>（对 <M>{'P'}</M>）相乘后可化简为逐元素形式 <M>{'\partial L/\partial S_{ij}=P_{ij}\big(G_{ij}-\sum_{k}P_{ik}G_{ik}\big)'}</M>——只含逐元素乘与行求和，全程无需物化 T×T 的 Jacobian 矩阵。行求和项随分块累积即可，与 forward 的 running-max 递推同构，所以 backward 同样可以分块流式，这是 FlashAttention backward 的核心。

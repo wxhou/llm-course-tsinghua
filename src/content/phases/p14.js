@@ -5,6 +5,6 @@ export default {
   source: 'phases/14-agent-engineering',
   complete: false,
   lessons: [
-    { id: 'fin', tier: 't1', order: 5, title: '期末 · 长程 Agent', componentId: 'final', acceptancePrefix: 'fin' },
+    { id: 'fin', title: '期末 · 长程 Agent', componentId: 'final', acceptancePrefix: 'fin' },
   ],
 }

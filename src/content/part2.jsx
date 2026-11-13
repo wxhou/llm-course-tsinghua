@@ -1,7 +1,8 @@
-import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, ErrorQuickRef } from '../lib/ui.jsx'
+import { M, MB, CodeBlock, Callout, Assignment, Star, Refs, ChapterHead, ErrorQuickRef, Section } from '../lib/ui.jsx'
 import ScalingLawDemo from '../demos/ScalingLawDemo.jsx'
 import { Checklist } from '../components/Progress.jsx'
 import { HW3_CHECK, HW4_CHECK, FIN_CHECK } from './registry.jsx'
+import { SITE } from '../site.js'
 
 /* ============ HW3 ============ */
 
@@ -15,7 +16,7 @@ export function HW3() {
         lead="目标：掌握工业界 LLM 团队占比最大的两件事——把原始网页变成可用语料的工程，以及用统计方法回答'预算该堆参数还是堆数据'。"
         hours="14–18h" prereq="HW1 的训练脚本可复用"
       />
-      <h3>3.1 数据管线：每一步都在去"毒"</h3>
+      <Section id="hw3-1">
       <table>
         <thead><tr><th>步骤</th><th>做什么</th><th>为什么必须做</th><th>工具</th></tr></thead>
         <tbody>
@@ -47,17 +48,23 @@ for doc_id, text in corpus.items():
       <Callout type="int" title="Har：上亿网页两两比对不现实，MinHash 用概率近似省了什么？">
         <p>两个集合的 MinHash 签名逐位相等的概率 = Jaccard 相似度。128 个置换给出 128 维签名，位比较代替集合比较，<M>{'O(|A|+|B|)'}</M> 的相似度判定变成 <M>{'O(128)'}</M>；LSH 分桶把成对比较从 <M>{'N^2'}</M> 降到近邻数量级。</p>
       </Callout>
-      <h3>3.2 Scaling Law：从经验曲线到预算决策</h3>
+      </Section>
+
+      <Section id="hw3-2">
       <Callout type="thm" title="Chinchilla 定律：参数和数据要按比例一起涨">
         <p><b>参数化</b>：<M>{'L(N,D)=E+A/N^{\beta}+B/D^{\gamma}'}</M>；对算力 <M>{'C\approx 6ND'}</M>，最优配比满足 <M>{'N_{\text{opt}}\propto C^{a},\ D_{\text{opt}}\propto C^{b}'}</M>，实证 <M>{'a\approx b\approx 0.5'}</M>——即 <b>参数与数据应等比增长</b>，经验法则每参数 20 token。GPT-3（175B/300B）按此标准欠训约一个数量级。</p>
       </Callout>
       <ScalingLawDemo />
-      <h3>3.3 你自己的拟合：log 空间最小二乘</h3>
+      </Section>
+
+      <Section id="hw3-3">
       <p>单变量形式 <M>{'L(N)=E+A/N^{\alpha}'}</M>。取对数后非线性部分只余截距：</p>
       <MB>{String.raw`\log(L(N)-E)=\log A-\alpha\,\log N \;\xrightarrow{\ E\ \text{固定}\ }\ \text{对 }(\log N,\ \log(L-E))\text{ 做线性回归}`}
       </MB>
       <p><M>{'E'}</M> 不可直接观测——实操是网格搜索 <M>{'E'}</M>，取使线性回归 <M>{'R^2'}</M> 最高的那个；报告时必须给出 <M>{'\alpha'}</M> 的置信区间（对回归系数做 t 检验即可）。迷你实验 6 个点只够"验证幂律形状成立"，别对外宣称精确系数。</p>
-      <h3>3.4 编程作业</h3>
+      </Section>
+
+      <Section id="hw3-4">
       <Assignment
         title="PA3 · 数据质量消融 + 迷你 Scaling Law"
         difficulty={3} estHours="12–16h" prereq="3.1–3.3；HW1 训练脚本"
@@ -77,6 +84,8 @@ for doc_id, text in corpus.items():
           '质量消融的"下游小任务"可用简单的 next-token 分类探针，不必搭完整 eval 框架。',
         ]}
       />
+      </Section>
+
       <h3>3.5 进阶思考题</h3>
       <Star diff={2} title="Llama 系列'训过头'（远超 Chinchilla 最优 token 数）为什么在推理经济学上是理性决策？">
         Chinchilla 最优化的是<b>训练算力</b>；部署成本由 <M>{'C_{\text{infer}}\propto N'}</M> 主导。"小参数 × 多数据"用一次性训练算力换终身推理成本——当模型服务量大时（Llama 的下载量级），这笔交换严格划算。Scaling law 给的是约束，不是目标函数；目标函数取决于训练/推理成本比。
@@ -117,13 +126,15 @@ export function HW4() {
         lead="目标：不只背结论，而是从同一个 KL 约束 RL 目标推出三种算法——理解它们是同一问题的不同近似，差别只在'信号从哪来'。"
         hours="14–18h" prereq="HW1 的 base model；概率论（KL 散度）"
       />
-      <h3>4.1 统一出发点：KL 约束的奖励最大化</h3>
+      <Section id="hw4-1">
       <Callout type="thm" title="三条后训练路线，出发去同一个地方">
         <MB>{String.raw`\max_{\pi}\ \mathbb{E}_{x\sim\mathcal{D},\,y\sim\pi(\cdot|x)}\big[r(x,y)\big]\;-\;\beta\,\mathbb{D}_{\mathrm{KL}}\big[\pi(\cdot|x)\,\|\,\pi_{\text{ref}}(\cdot|x)\big]`}
         </MB>
         <p>奖励 <M>{'r'}</M> 的来源决定了路线：人类标注训出的奖励模型（RLHF）、偏好对（DPO 的隐式奖励）、可验证判分器（RLVR）。<M>{'\beta'}</M> 是不偏离 base 的拉力——三种方法共享它。</p>
       </Callout>
-      <h3>4.2 DPO：两步闭式推导（作业要求手推一遍）</h3>
+      </Section>
+
+      <Section id="hw4-2">
       <p><b>第一步</b>：上述目标的 optimal policy 有闭式解，反解奖励：</p>
       <MB>{String.raw`p^*(y|x)=\frac{1}{Z(x)}\pi_{\text{ref}}(y|x)\,e^{r(x,y)/\beta}\;\Longleftrightarrow\;r(x,y)=\beta\log\frac{p^*(y|x)}{\pi_{\text{ref}}(y|x)}+\beta\log Z(x)`}
       </MB>
@@ -133,14 +144,18 @@ export function HW4() {
       <Callout type="int" title="这个公式读完了，它在告诉你什么？">
         <p>① DPO 不是"绕过 RL"，是把 RL 解的闭式形式直接当损失；② <M>{'\beta'}</M> 越小越敢偏离参考模型（也越容易崩）；③ 它优化的是<b>似然差</b>，对 lose 侧的唯一约束是"压下去"——这就是为什么 DPO 后生成多样性常下降、以及为什么先 SFT 把分布收拢再 DPO 才稳。</p>
       </Callout>
-      <h3>4.3 RLVR 与 GRPO：奖励可验证时的做法</h3>
+      </Section>
+
+      <Section id="hw4-3">
       <p>奖励来自判分器（测试通过 / 答案匹配 / 格式合规）。GRPO 省掉 critic：对同一 prompt 采 <M>{'K'}</M> 个回答，用组内均值当 baseline：</p>
       <MB>{String.raw`A_i=\frac{r_i-\mathrm{mean}(r_{1:K})}{\mathrm{std}(r_{1:K})+\epsilon},\qquad \mathcal{L}=-\mathbb{E}\Big[\min\big(\rho_iA_i,\ \text{clip}(\rho_i,1\pm\epsilon)A_i\big)\Big]`}
       </MB>
       <Callout type="warn" title="模型会比作弊者更快找到判分器的漏洞（Reward Hacking）">
         <p>判分器一旦有洞，策略一定找到并无限利用：答案匹配判分器会被"输出答案串但过程垃圾"攻破；测试判分器会被硬编码期望输出攻破。对策：判分器多样化 + 定期人工审计高分样本。你会在 PA4 里亲手见到一次 hacking——这是本作业最重要的体验。</p>
       </Callout>
-      <h3>4.4 编程作业</h3>
+      </Section>
+
+      <Section id="hw4-4">
       <Assignment
         title="PA4 · 同一 Base 三条路线受控对比"
         difficulty={4} estHours="12–16h" prereq="4.1–4.3"
@@ -161,6 +176,8 @@ export function HW4() {
           '造一个必然被 hack 的判分器（如只查关键词）是体验 hacking 最快的方式， deliberately 做一次。',
         ]}
       />
+      </Section>
+
       <h3>4.5 进阶思考题</h3>
       <Star diff={2} title="IPO 指出 DPO 的什么失败模式？数学上改了哪一项？">
         DPO 的 logistic 损失在可分数据上会驱使 <M>{'\pi_\theta(y_w)'}</M> 无限上升、<M>{'\pi_\theta(y_l)'}</M> 无限下降，过拟合偏好对。IPO 把损失改为对偏好边际的<b>平方回归</b> <M>{'(\log(\pi_w/\pi_{\text{ref}})-\log(\pi_l/\pi_{\text{ref}})-2\beta\gamma)^2'}</M>——目标从"拉到无穷"变成"收敛到有限边际 <M>{'2\beta\gamma'}</M>"。
@@ -202,7 +219,7 @@ export function Final() {
         lead="四格作业的汇合点：HW1 给你模型、HW2 给你算子直觉、HW3 给你数据方法学、HW4 给你训练算法——期末把它们拼成一个会干活的系统，并且训练它。"
         hours="40h+" prereq="HW1–HW4 全部完成"
       />
-      <h3>5.1 三个组件的接口契约</h3>
+      <Section id="fin-5-1">
       <CodeBlock file="env_schema.json · 可验证环境的最小契约" lang="json">
 {`{
   "task_id": "fix-bug-0007",
@@ -213,7 +230,9 @@ export function Final() {
 }`}
       </CodeBlock>
       <p>关键设计决策都在这张 schema 里：<M>{'\text{partial}'}</M> 是否允许（稠密奖励好训但易被 hack）、<M>{'\text{max_steps}'}</M> 设多少（决定"长程"到什么程度）、verifier 是否防泄漏（测试本身可能被 agent 改掉——所以真实验收要在<b>另一份</b>隐藏测试上跑）。</p>
-      <h3>5.2 Harness 主循环</h3>
+      </Section>
+
+      <Section id="fin-5-2">
       <CodeBlock file="harness.py · agent loop 骨架" lang="python" highlight={[9, 10, 11, 12]}>
 {`def run_episode(env, policy, judge=None, traj=None):
     obs, info = env.reset()
@@ -233,7 +252,9 @@ export function Final() {
       <Callout type="warn" title="自己评自己，这两个统计学陷阱要防">
         <p><b>自我偏好</b>：同一模型既当选手又当裁判，自评分与真实通过率的相关性可能很弱——务必用留出集校准 judge 的混淆矩阵；<b>终审权归属</b>：judge 分只能当"再试一次"的触发器，最终 reward 必须来自环境的客观 verifier，否则你训练的是"讨好自己"的策略。</p>
       </Callout>
-      <h3>5.3 编程作业</h3>
+      </Section>
+
+      <Section id="fin-5-3">
       <Assignment
         title="FINAL · 端到端：迷你环境 + Harness + Self-judge +（进阶）RLVR"
         difficulty={5} estHours="40h+" prereq="HW1–HW4"
@@ -260,6 +281,9 @@ export function Final() {
         [<>自建环境判分全部 fail（agent 其实做对了）</>, 'verifier 的测试命令/工作目录与容器内实际路径不一致，或依赖未装', <>自己以「考生身份」在容器里手动跑一遍测试命令；用绝对路径或显式 cd；把依赖固化进环境镜像</>],
         [<>长轨迹跑几步就超上下文窗口</>, '每步的工具输出（文件全文、长日志）原样进历史，轨迹线性膨胀', <>工具输出截断（只回错误行+前后文）；历史超窗时做滚动摘要；read 工具返回带行号窗口而非全文</>],
       ]} />
+      </Section>
+
+      <Checklist items={FIN_CHECK} />
       <h3>5.4 进阶思考题</h3>
       <Star diff={3} title="为什么'隐藏测试'是防 hacking 的必要非充分条件？还能从哪三个维度加固？">
         必要：agent 可见的测试可被直接改写或硬编码通过。非充分：agent 仍可 overfit 输入分布（特判题面样例）、或通过 side channel（修改 conftest/环境变量）。加固：输入扰动（同构新用例）、过程检查（diff 审计：测试文件的修改单独 revert）、pass@k 与 pass^k 双指标（后者衡量稳定性）。
@@ -313,7 +337,7 @@ export function Plan() {
       <div className="card blue">
         <p>期末项目按"先环境、再 harness、再 self-judge、最后 RLVR"的顺序推进——每一步都可独立交付。评分逻辑与课程一致：<b>Results 主曲线（self-judge 前后通过率）是核心权重</b>，Method 的可复现性次之，Problem 与 Motivation 各一票。每完成一步，用四件事各问自己一遍。</p>
       </div>
-      <footer>本站为自学教学页，基于清华 KEG《高级机器学习》2026 秋作业框架的公开转述与开源社区资源重建；课程课件本身未公开。<br />数据说明：你的学习进度、主题偏好与续读位置仅保存在本机浏览器中，本站不收集、不上传任何数据。</footer>
+      <footer>本站为自学教学页：主线参考 {SITE.sources.upstream}；其中 P10 与 P14 的作业设计参考 {SITE.sources.course}。<br />数据说明：你的学习进度、主题偏好与续读位置仅保存在本机浏览器中，本站不收集、不上传任何数据。</footer>
     </section>
   )
 }

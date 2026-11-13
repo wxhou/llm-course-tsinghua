@@ -77,8 +77,8 @@ export default function AttentionDemo() {
               {rows[qi].map((v, ki) => (
                 <td
                   key={ki}
-                  className="attn-cell"
-                  style={{ background: `rgba(139,47,47,${Math.min(1, v * 2.2).toFixed(2)})` }}
+                  className={`attn-cell${v * 2.2 >= 0.5 ? ' strong' : ''}`}
+                  style={{ background: `rgba(var(--attn-rgb),${Math.min(1, v * 2.2).toFixed(2)})` }}
                 >
                   {v >= 0.10 ? v.toFixed(2) : ''}
                 </td>

@@ -1,7 +1,11 @@
 import { useMemo, useState, useEffect } from 'react'
 import katex from 'katex'
 import { PATH } from '../routes.js'
-import { PHASE_LABELS, useNarrative } from './narrative.jsx'
+import { SECTION_BY_ID, sectionCheckId } from '../content/sections.js'
+import { setItemState } from '../components/Progress.jsx'
+import { SITE } from '../site.js'
+import PhaseGlyph from '../components/PhaseGlyph.jsx'
+import { useNarrative } from './narrative.jsx'
 import './katex-subset.css'
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
@@ -67,6 +71,51 @@ export function CodeBlock({ lang = 'python', file, highlight = [], children }) {
       </div>
       <pre><code dangerouslySetInnerHTML={{ __html: html }} /></pre>
     </div>
+  )
+}
+
+/* ---------------- 节：标题、锚点、交付物与检查全部由节数据渲染 ---------------- */
+export function Section({ id, children }) {
+  const sec = SECTION_BY_ID[id]
+  if (!sec) throw new Error(`<Section id="${id}"> 找不到对应的节数据（跑 npm run check:content）`)
+  const checkId = sectionCheckId(id)
+  const [passed, setPassed] = useState(() => localStorage.getItem('llmcourse-' + checkId) === '1')
+  const [copied, setCopied] = useState(false)
+
+  const copy = () => {
+    navigator.clipboard?.writeText(sec.check.cmd)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  const toggle = () => {
+    const next = !passed
+    setPassed(next)
+    setItemState(checkId, next)
+  }
+
+  return (
+    <section className="sec" id={id} aria-labelledby={id + '-title'}>
+      <h2 className="sec-title" id={id + '-title'}>{sec.title}</h2>
+      <p className="sec-deliverable"><b>交付物</b>{sec.deliverable}</p>
+      {children}
+      <div className="sec-gate">
+        <div className="sg-head"><span>检查</span><code>{sec.check.grader}</code></div>
+        <p className="sg-how">{sec.check.how}</p>
+        {sec.check.interface && (
+          <p className="sg-iface"><b>接口</b><code>{sec.check.interface}</code></p>
+        )}
+        <div className="sg-cmd">
+          <code>{sec.check.cmd}</code>
+          <button onClick={copy}>{copied ? '已复制' : '复制'}</button>
+        </div>
+        <p className="sg-expect"><b>判定</b>{sec.check.expect}</p>
+        <p className="sg-pitfall"><b>常见失败</b>{sec.check.pitfall}</p>
+        <label className="sg-pass">
+          <input type="checkbox" checked={passed} onChange={toggle} />
+          <span>我跑通了这项检查</span>
+        </label>
+      </div>
+    </section>
   )
 }
 
@@ -163,20 +212,7 @@ export function Refs({ items }) {
   )
 }
 
-/* ---------------- 阶段签：训练隐喻铭牌 + 已发布 phase 进度格（R5，NarrativeContext 注入） ---------------- */
-export function PhaseStrip({ slug }) {
-  const narrative = useNarrative()
-  return (
-    <span className="run-strip" aria-hidden="true">
-      <span className="run-strip-label">{PHASE_LABELS[slug]}</span>
-      {(narrative?.phases || []).map(p => {
-        const st = narrative?.phaseStates?.[p.id]
-        const cls = st?.archived ? 'done' : p.id === narrative?.phaseId ? 'now' : 'future'
-        return <i key={p.id} className={`tick ${cls}`} title={p.title} />
-      })}
-    </span>
-  )
-}
+/* ---------------- 章节头：色带 + 专属图示 ---------------- */
 
 /* ---------------- 训练档案卡：收敛后总览常驻的藏书票式双框卡（R4 标志性瞬间） ---------------- */
 export function RunReportCard() {
@@ -187,7 +223,7 @@ export function RunReportCard() {
     <aside className="report-card" aria-label="训练档案卡">
       <div className="rc-inner">
         <div className="rc-kicker">TRAINING RUN #001 · FINAL REPORT</div>
-        <h3 className="rc-title">从零训练大模型</h3>
+        <h3 className="rc-title">{SITE.name}</h3>
         <div className="rc-stats">
           28 STEPS · 5 CHECKPOINTS
           {first && converged && <> · {fmt(first)} → {fmt(converged)}</>}
@@ -250,17 +286,19 @@ export function PrevNext({ routeKey, done, total }) {
   )
 }
 
-/* ---------------- 章节头：期刊式巨型描边数字 ---------------- */
+/* ---------------- 章节头：色带 + 专属图示 ---------------- */
 export function ChapterHead({ kicker, no, title, lead, hours, prereq, oneliner }) {
   const narrative = useNarrative()
   return (
     <header className="chap-head">
-      {no && <div className="chap-digit" aria-hidden="true">{no}</div>}
       <div className="chap-body">
-        <div className="kicker">{kicker}</div>
+        <div className="chap-top">
+          <span className="kicker">{kicker}</span>
+          {no && <span className="chap-digit" aria-hidden="true">{no}</span>}
+        </div>
         <h1 className="chap-title">{title}</h1>
         {oneliner && <div className="oneliner"><b>一句话</b>{oneliner}</div>}
-        <p className="lead">{lead}</p>
+        {lead && <p className="lead">{lead}</p>}
         <div className="chap-meta">
           {(hours || prereq) && (
             <>
@@ -268,9 +306,9 @@ export function ChapterHead({ kicker, no, title, lead, hours, prereq, oneliner }
               {prereq && <span>先修 {prereq}</span>}
             </>
           )}
-          {narrative && <PhaseStrip slug={narrative.slug} />}
         </div>
       </div>
+      {narrative?.phaseId && <PhaseGlyph id={narrative.phaseId} className="chap-glyph" />}
     </header>
   )
 }

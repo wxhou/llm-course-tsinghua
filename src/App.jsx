@@ -3,14 +3,16 @@ import { Overview } from './content/part1.jsx'
 import { Plan } from './content/part2.jsx'
 import { ProgressBox, useGlobalProgress, usePhaseStates, isArchived, lessonStats } from './components/Progress.jsx'
 import PhasePage from './components/PhasePage.jsx'
+import MapPage from './components/MapPage.jsx'
 import Palette from './components/Palette.jsx'
 import { PrevNext } from './lib/ui.jsx'
 import { NAV, parseRoute, consumePendingAnchor, scrollBehavior } from './routes.js'
 import { NarrativeContext } from './lib/narrative.jsx'
-import { PHASE_BY_ID, LESSON_BY_ID, NAV_PHASES } from './content/phases/index.js'
+import { PHASE_BY_ID, LESSON_BY_ID } from './content/phases/index.js'
+import { SITE } from './site.js'
 
-/* 元页面（非 phase）：总览与学习计划 */
-const META_SECTIONS = { overview: Overview, plan: Plan }
+/* 元页面（非 phase）：总览、课程地图与学习计划 */
+const META_SECTIONS = { overview: Overview, map: MapPage, plan: Plan }
 
 /* hash 路由：hashchange 驱动；URL 规范化（默认态/未知/旧格式/纯格式变化）一律 replaceState，不推历史栈 */
 function useHashRoute() {
@@ -19,7 +21,7 @@ function useHashRoute() {
     const normalize = () => {
       const r = parseRoute()
       setRoute(r)
-      const want = '#/' + r.key
+      const want = r.explicitSection ? `#/${r.key}/${r.sectionId}` : '#/' + r.key
       if (location.hash !== want) history.replaceState(null, '', want)
     }
     normalize()
@@ -76,15 +78,16 @@ function TopBar({ dark, toggleTheme, onMenu, progress, onPalette }) {
   return (
     <div className="topbar">
       <button className="menu-btn" onClick={onMenu} aria-label="打开目录">☰ 目录</button>
-      <span className="course-code">ADV-ML 2026</span>
-      <span className="course-name">从零训练大模型 · 自学阶梯</span>
-      <span className="term">作业 40% + 期末 60% · 60–80 学时</span>
+      <span className="course-code">FULL STACK</span>
+      <span className="course-name">{SITE.name}</span>
       <span className="spacer" />
       <span className="study-progress" title={`全站学习进度 ${study.done}/${study.total} 项`}>
         已学 {pct}% · {study.done}/{study.total} 项
       </span>
       <button className="theme-btn pal-btn" onClick={onPalette} title="快速跳转 (⌘K)">跳转 <b className="kbd">⌘K</b></button>
-      <button className="theme-btn" onClick={toggleTheme}>{dark ? '☀ 浅色' : '☾ 深色'}</button>
+      <button className="theme-btn" onClick={toggleTheme} aria-label={dark ? '切换到浅色' : '切换到深色'}>
+        {dark ? '☀' : '☾'}<span className="btn-label">{dark ? ' 浅色' : ' 深色'}</span>
+      </button>
       <div className="scroll-progress" aria-hidden="true">
         <div style={{ width: progress + '%' }} />
       </div>
@@ -100,8 +103,8 @@ function Sidebar({ open, onNavigate, route }) {
 
   return (
     <nav className={`sidebar ${open ? 'open' : ''}`}>
-      <div className="brand">从零训练大模型</div>
-      <div className="brand-sub">基于清华 KEG《高级机器学习》作业阶梯重建的自学课程</div>
+      <div className="brand">{SITE.name}</div>
+      <div className="brand-sub">{SITE.tagline}</div>
       {NAV.map(n => {
         const p = n.kind === 'phase' ? states[n.slug] : null
         const isDone = p && p.total > 0 && p.done === p.total
@@ -187,26 +190,24 @@ export default function App() {
     localStorage.setItem('llm-last', JSON.stringify({ href: '#/' + route.key, label: nav.label, ts: Date.now() }))
   }, [route.key, route.meta, nav])
 
-  /* 路由渲染完成后：消费跨页 pending anchor，否则回顶 */
+  /* 路由渲染完成后：消费跨页 pending anchor；URL 点名了某一节就滚到该节，否则回顶（章头即课的锚点） */
   useEffect(() => {
     const anchor = consumePendingAnchor()
-    const el = anchor && document.querySelector(anchor)
+    // 用 getElementById 而非拼选择器：id 由数据给出，别假设它能安全进 CSS 选择器
+    const el = anchor
+      ? document.querySelector(anchor)
+      : (route.explicitSection ? document.getElementById(route.sectionId) : null)
     if (el) {
-      el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
+      el.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
       el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash')
       setTimeout(() => el.classList.remove('flash'), 1900)
     } else {
       window.scrollTo(0, 0)
     }
-  }, [route.key])
+  }, [route.key, route.sectionId, route.explicitSection])
 
-  /* 阶段签注入：phases 列出已发布 phase，phaseStates 提供存档态 */
-  const narrative = {
-    slug: route.meta || route.lessonId,
-    phaseId: route.phaseId,
-    phases: NAV_PHASES.map(p => ({ id: p.id, title: p.title })),
-    phaseStates: Object.fromEntries(NAV_PHASES.map(p => [p.id, { archived: isArchived(p.id) }])),
-  }
+  /* 章节头需要知道当前 phase，用于色带与图示 */
+  const narrative = { phaseId: route.phaseId }
 
   return (
     <>
@@ -220,13 +221,13 @@ export default function App() {
               {MetaSection
                 ? <MetaSection />
                 : <PhasePage phase={phase} lesson={lesson} />}
-              <PrevNext routeKey={route.meta || route.lessonId} done={stats.done} total={stats.total} />
+              <PrevNext routeKey={route.meta || route.sectionId} done={stats.done} total={stats.total} />
             </div>
           </main>
         </div>
       </NarrativeContext.Provider>
       <div className={`scrim ${menuOpen ? 'show' : ''}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
-      <Palette open={palOpen} onClose={() => setPalOpen(false)} slug={route.meta || route.lessonId} />
+      <Palette open={palOpen} onClose={() => setPalOpen(false)} />
     </>
   )
 }

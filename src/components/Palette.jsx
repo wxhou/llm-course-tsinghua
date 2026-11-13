@@ -1,31 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { NAV, navigateToAnchor } from '../routes.js'
-import { LESSON_BY_ID, PHASE_BY_ID } from '../content/phases/index.js'
+import { NAV, sectionHref } from '../routes.js'
+import { PHASE_BY_ID, SECTION_PATH } from '../content/phases/index.js'
 
-/* 小节 → 面板标签：课节点显示其所属 phase，元页面显示固定标签 */
-const META_TAG = { overview: '总览', plan: '计划' }
-const tagFor = id => {
-  const lesson = LESSON_BY_ID[id]
-  if (lesson) return PHASE_BY_ID[lesson.phaseId].title
-  return META_TAG[id] || id
-}
-
-/* 索引 = 全局章节条目（静态） + 当前章 h3 小节（打开时 DOM 扫描，范围限本页）。
-   小节 id 永不写入 URL：点击走章节路由 + pending anchor。 */
-function buildIndex(slug) {
-  const items = NAV.map(n => ({ kind: 'chapter', href: '#/' + n.slug, slug: n.slug, no: n.no, label: n.label, tag: '章节' }))
-  document.querySelectorAll('main section').forEach(sec => {
-    if (sec.id !== slug) return
-    const tag = tagFor(sec.id)
-    sec.querySelectorAll('h3').forEach((h, i) => {
-      if (!h.id) h.id = `${sec.id}-s${i}`
-      items.push({ kind: 'anchor', anchor: '#' + h.id, no: '', label: h.textContent.trim(), tag })
+/* 索引 = 全站章节 + 全部已发布节。节由数据派生，不再扫描 DOM。 */
+function buildIndex() {
+  const items = NAV.map(n => ({ kind: 'nav', href: '#/' + n.slug, no: n.no, label: n.label, tag: '章节' }))
+  for (const s of SECTION_PATH) {
+    items.push({
+      kind: 'section',
+      href: sectionHref(s.phaseId, s.lessonId, s.id),
+      no: '',
+      label: s.title,
+      tag: PHASE_BY_ID[s.phaseId].title,
+      sub: s.lessonTitle,
     })
-  })
+  }
   return items
 }
 
-export default function Palette({ open, onClose, slug }) {
+export default function Palette({ open, onClose }) {
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const [items, setItems] = useState([])
@@ -34,7 +27,7 @@ export default function Palette({ open, onClose, slug }) {
 
   useEffect(() => {
     if (!open) return
-    setItems(buildIndex(slug))
+    setItems(buildIndex())
     setQ('')
     setSel(0)
     setTimeout(() => inputRef.current?.focus(), 0)
@@ -60,11 +53,7 @@ export default function Palette({ open, onClose, slug }) {
 
   const go = it => {
     onClose()
-    if (it.kind === 'chapter') {
-      location.hash = it.href  // 顶滚由路由 effect 负责
-    } else {
-      navigateToAnchor(slug, it.anchor)
-    }
+    location.hash = it.href  // 滚动由路由 effect 负责
   }
 
   /* 键盘语义挂在对话框容器上：Esc 任何位置可关；Tab 困在面板内（input 是唯一落点） */
@@ -83,15 +72,15 @@ export default function Palette({ open, onClose, slug }) {
           ref={inputRef}
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="跳转到章节，或搜索本页小节…"
+          placeholder="跳转到章节或小节…"
           aria-label="搜索章节或小节"
           spellCheck="false"
         />
         <div className="pal-list" role="listbox" aria-label="跳转目标" ref={listRef}>
-          {filtered.length === 0 && <div className="pal-empty">没有匹配「{q.trim()}」的小节——清空关键词可看全部章节</div>}
+          {filtered.length === 0 && <div className="pal-empty">没有匹配「{q.trim()}」的章节或小节——清空关键词可看全部</div>}
           {filtered.map((it, i) => (
             <div
-              key={it.href || it.anchor}
+              key={it.href}
               role="option"
               aria-selected={i === sel}
               className={`pal-item ${i === sel ? 'sel' : ''}`}
@@ -100,7 +89,7 @@ export default function Palette({ open, onClose, slug }) {
             >
               <span className="no">{it.no || it.tag}</span>
               <span className="pl-label">{it.label}</span>
-              <span className="sub">{it.no ? it.tag : '§ 本页'}</span>
+              <span className="sub">{it.no ? '章节' : it.sub}</span>
             </div>
           ))}
         </div>

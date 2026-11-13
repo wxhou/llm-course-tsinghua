@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CHECKS } from '../content/registry.jsx'
+import { sectionCheckItems } from '../content/sections.js'
 import { PHASE_BY_ID, PUBLISHED_PHASES, NAV_PHASES } from '../content/phases/index.js'
 
 const KEY = id => 'llmcourse-' + id
@@ -12,8 +13,11 @@ export function ProgressProvider({ children }) {
   return <>{children}</>
 }
 
-const lessonItems = lesson =>
-  (lesson.acceptancePrefix && CHECKS[lesson.acceptancePrefix]) || []
+/* 课级验收项 = 既有注册表项 + 本节各节的检查项（同一份本机状态，不新增层级） */
+const lessonItems = lesson => [
+  ...((lesson.acceptancePrefix && CHECKS[lesson.acceptancePrefix]) || []),
+  ...sectionCheckItems(lesson.id),
+]
 
 /* 课级进度：由注册表 × localStorage 派生，不写第二份真源 */
 export function lessonStats(lesson) {
@@ -114,20 +118,26 @@ export function useGlobalProgress() {
   return counts
 }
 
+/* 勾选写入的唯一入口：课级清单与节内自检共用同一份键与事件（design D4） */
+export function setItemState(id, on) {
+  localStorage.setItem(KEY(id), on ? '1' : '0')
+  // 第一公里仪式：全站首次勾选（design 决策 4）
+  if (on && !localStorage.getItem('llm-first-check')) {
+    const now = new Date().toISOString()
+    localStorage.setItem('llm-first-check', now)
+    localStorage.setItem('llm-first-step-at', now)
+    window.dispatchEvent(new Event(EVT_FIRST_CHECK))
+  }
+  window.dispatchEvent(new Event(EVT))
+}
+
 export function Checklist({ items }) {
   const [state, setState] = useState(() => items.map(it => localStorage.getItem(KEY(it.id)) === '1'))
   const toggle = i => {
     const next = [...state]
     next[i] = !next[i]
     setState(next)
-    localStorage.setItem(KEY(items[i].id), next[i] ? '1' : '0')
-    // 第一公里仪式：全站首次勾选（design 决策 4）
-    if (next[i] && !localStorage.getItem('llm-first-check')) {
-      localStorage.setItem('llm-first-check', new Date().toISOString())
-      localStorage.setItem('llm-first-step-at', new Date().toISOString())
-      window.dispatchEvent(new Event(EVT_FIRST_CHECK))
-    }
-    window.dispatchEvent(new Event(EVT))
+    setItemState(items[i].id, next[i])
   }
   return (
     <ul className="check">
